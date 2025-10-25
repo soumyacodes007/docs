@@ -9,20 +9,25 @@ Understanding how platform owners manage the CeloRefer system.
 
 ## 1. Deploy Contracts
 
-Platform owners deploy the CeloRefer contracts:
+Platform owners deploy the CeloRefer contracts to the Celo network:
 
-```typescript
-// Deployment is typically done using Hardhat or Foundry
-// Refer to the contract documentation for deployment scripts
-```
+**Network:** Celo Sepolia Testnet (Chain ID: 11142220)
+
+| Contract | Address |
+|----------|----------|
+| CeloReferEnhanced | `0xCCAddAC9Ac91D548ada36684dB2b3796A0c7Ea73` |
+| ReputationNFT | `0xe667437aF0424Ee9cb983b755Ccccf218779E37b` |
+| cUSD | `0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b` |
 
 ## 2. Set Platform Fee
 
 Configure the platform fee percentage:
 
 ```typescript
-// Set platform fee to 15%
-await sdk.setPlatformFeePercentage(1500); // 1500 basis points = 15%
+// This is typically done by the platform owner
+// Platform fee is currently set to 15% (1500 basis points)
+const platformFee = await sdk.getPlatformFee();
+console.log('Current platform fee:', platformFee / 100, '%');
 ```
 
 ## 3. Authorize Partners
@@ -30,11 +35,12 @@ await sdk.setPlatformFeePercentage(1500); // 1500 basis points = 15%
 Authorize partner dApps:
 
 ```typescript
-// Authorize a partner with Pro tier
-await sdk.authorizePartner(partnerAddress, 2); // 2 = Pro tier
+// Check if a partner is authorized
+const isAuthorized = await sdk.isAuthorizedPartner(partnerAddress);
+console.log('Partner authorized:', isAuthorized);
 
-// Deauthorize a partner
-await sdk.deauthorizePartner(partnerAddress);
+// Authorization is typically done by the platform owner
+// Partners can have different subscription tiers (0=Free, 1=Basic, 2=Pro, 3=Enterprise)
 ```
 
 ## 4. Create Quests
@@ -42,17 +48,18 @@ await sdk.deauthorizePartner(partnerAddress);
 Create quests for users:
 
 ```typescript
-// Create a new quest
-const questParams = {
+// Quest creation is typically done by the platform owner
+// Example quest structure:
+const questExample = {
   name: "First 5 Referrals",
   description: "Refer 5 users to earn a reward",
-  targetReferralCount: 5,
+  targetReferrals: 5,
   rewardAmount: BigInt(50 * 10**18), // 50 cUSD
   startTime: Math.floor(Date.now() / 1000),
   endTime: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60 // 30 days
 };
 
-await sdk.createQuest(questParams);
+// Quests are created directly on the contract by the owner
 ```
 
 ## 5. Manage Seasons
@@ -60,45 +67,49 @@ await sdk.createQuest(questParams);
 Create and manage seasonal competitions:
 
 ```typescript
-// Create a new season
-const seasonParams = {
+// Season creation is typically done by the platform owner
+// Example season structure:
+const seasonExample = {
   name: "Summer Challenge",
   description: "Summer referral competition",
   startTime: Math.floor(Date.now() / 1000),
   endTime: Math.floor(Date.now() / 1000) + 60 * 24 * 60 * 60, // 60 days
-  prizePool: BigInt(1000 * 10**18) // 1000 cUSD
+  totalPrizePool: BigInt(1000 * 10**18), // 1000 cUSD
+  winnersCount: 10
 };
 
-await sdk.createSeason(seasonParams);
+// Seasons are created directly on the contract by the owner
 ```
 
-## 6. Collect Platform Fees
-
-Withdraw collected platform fees:
-
-```typescript
-// Check available fees
-const availableFees = await sdk.getPlatformFees();
-
-// Withdraw fees to treasury
-await sdk.withdrawPlatformFees(treasuryAddress, availableFees);
-```
-
-## 7. Monitor System
+## 6. Monitor System
 
 Monitor the system performance:
 
 ```typescript
 // Get system statistics
-const stats = await sdk.getSystemStats();
-console.log(`Total users: ${stats.totalUsers}`);
-console.log(`Total referrals: ${stats.totalReferrals}`);
-console.log(`Total rewards distributed: ${stats.totalRewardsDistributed}`);
+const stats = await sdk.getContractStats();
+console.log('Total users:', stats.totalUsers);
+console.log('Total referrals:', stats.totalReferrals);
+console.log('Total quests:', stats.totalQuests);
+console.log('Total seasons:', stats.totalSeasons);
 
 // Get partner information
-const partnerInfo = await sdk.getPartnerInfo(partnerAddress);
-console.log(`Partner tier: ${partnerInfo.tier}`);
-console.log(`Partner status: ${partnerInfo.authorized ? 'Authorized' : 'Not authorized'}`);
+const subscription = await sdk.getPartnerSubscription(partnerAddress);
+console.log('Partner tier:', subscription.tier);
+console.log('Partner status:', subscription.isActive ? 'Active' : 'Inactive');
+```
+
+## 7. Collect Platform Fees
+
+Platform fees are automatically collected and sent to the treasury:
+
+```typescript
+// Get treasury address
+const treasury = await sdk.getTreasury();
+console.log('Treasury address:', treasury);
+
+// Platform fees are automatically distributed to the treasury
+// No manual withdrawal needed
 ```
 
 ## 8. Emergency Functions
@@ -106,12 +117,7 @@ console.log(`Partner status: ${partnerInfo.authorized ? 'Authorized' : 'Not auth
 In case of emergencies, platform owners have special functions:
 
 ```typescript
-// Emergency pause (only owner)
-await sdk.pause();
-
-// Emergency unpause (only owner)
-await sdk.unpause();
-
-// Emergency withdraw (only owner)
-await sdk.emergencyWithdraw(tokenAddress, recipientAddress, amount);
+// Emergency functions are available only to the contract owner
+// These include pause/unpause and emergency withdrawal functions
+// They are used only in critical situations
 ```

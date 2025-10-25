@@ -7,6 +7,36 @@ description: "API reference for reputation NFT minting and management"
 
 Methods for working with reputation NFTs.
 
+## mintReputationNFT
+
+Mints a reputation NFT for a user.
+
+```typescript
+async mintReputationNFT(userAddress: Address): Promise<Hex>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+`Hex` - Transaction hash of the minting.
+
+### Example
+
+```typescript
+const txHash = await sdk.mintReputationNFT('0x1234...');
+console.log('NFT minted:', txHash);
+```
+
+### Requirements
+
+- User must be registered
+- User must not already have an NFT
+
 ## hasReputationNFT
 
 Checks if a user has minted their reputation NFT.
@@ -29,64 +59,15 @@ async hasReputationNFT(userAddress: Address): Promise<boolean>
 
 ```typescript
 const hasNFT = await sdk.hasReputationNFT('0x1234...');
-console.log(hasNFT); // true or false
+console.log('Has NFT:', hasNFT);
 ```
 
-## mintReputationNFT
-
-Mints a reputation NFT for a user.
-
-```typescript
-async mintReputationNFT(): Promise<void>
-```
-
-### Example
-
-```typescript
-await sdk.mintReputationNFT();
-```
-
-### Requirements
-
-- User must be registered
-- User must not already have an NFT
-
-### Events
-
-Emits a `NFTMinted` event on the blockchain.
-
-## getReputationNFTMetadata
-
-Gets the metadata for a user's reputation NFT.
-
-```typescript
-async getReputationNFTMetadata(userAddress: Address): Promise<NFTMetadata>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| userAddress | `Address` | Address of the user |
-
-### Returns
-
-[NFTMetadata](/api-reference/typescript-types#nftmetadata) object containing NFT details.
-
-### Example
-
-```typescript
-const metadata = await sdk.getReputationNFTMetadata('0x1234...');
-console.log(`Token URI: ${metadata.tokenURI}`);
-console.log(`Badge tier: ${metadata.badgeTier}`);
-```
-
-## getReputationNFTTokenId
+## getTokenIdByUser
 
 Gets the token ID for a user's reputation NFT.
 
 ```typescript
-async getReputationNFTTokenId(userAddress: Address): Promise<bigint>
+async getTokenIdByUser(userAddress: Address): Promise<bigint>
 ```
 
 ### Parameters
@@ -102,24 +83,106 @@ async getReputationNFTTokenId(userAddress: Address): Promise<bigint>
 ### Example
 
 ```typescript
-const tokenId = await sdk.getReputationNFTTokenId('0x1234...');
-console.log(`Token ID: ${tokenId}`);
+const tokenId = await sdk.getTokenIdByUser('0x1234...');
+console.log('Token ID:', tokenId);
 ```
 
-## refreshReputationNFT
+## getNFTTokenURI
 
-Refreshes the metadata for a user's reputation NFT to reflect current stats.
+Gets the token URI for an NFT.
 
 ```typescript
-async refreshReputationNFT(): Promise<void>
+async getNFTTokenURI(tokenId: bigint): Promise<string>
 ```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| tokenId | `bigint` | Token ID |
+
+### Returns
+
+`string` - Token URI.
 
 ### Example
 
 ```typescript
-await sdk.refreshReputationNFT();
+const tokenId = await sdk.getTokenIdByUser('0x1234...');
+const tokenURI = await sdk.getNFTTokenURI(tokenId);
+console.log('Token URI:', tokenURI);
 ```
 
-### Events
+## getReputationNFTData
 
-Emits a `NFTRefreshed` event on the blockchain.
+Gets the metadata for a user's reputation NFT.
+
+```typescript
+async getReputationNFTData(userAddress: Address): Promise<ReputationNFTData>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+[ReputationNFTData](/api-reference/typescript-types#reputationnftdata) object containing NFT details.
+
+### Example
+
+```typescript
+const nftData = await sdk.getReputationNFTData('0x1234...');
+console.log('NFT Tier:', nftData.tier);
+console.log('NFT Referrals:', nftData.referrals);
+console.log('NFT Earnings:', nftData.earnings);
+```
+
+## getNFTTotalSupply
+
+Gets the total supply of reputation NFTs.
+
+```typescript
+async getNFTTotalSupply(): Promise<bigint>
+```
+
+### Returns
+
+`bigint` - Total supply of NFTs.
+
+### Example
+
+```typescript
+const supply = await sdk.getNFTTotalSupply();
+console.log('Total NFTs minted:', supply);
+```
+
+## generateBadgeSVG
+
+Generates an SVG badge for display.
+
+```typescript
+generateBadgeSVG(tier: number, referrals: number, earnings: bigint, rank: number): string
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| tier | `number` | Badge tier |
+| referrals | `number` | Number of referrals |
+| earnings | `bigint` | Total earnings in wei |
+| rank | `number` | User's rank |
+
+### Returns
+
+`string` - Data URI of the SVG badge.
+
+### Example
+
+```typescript
+const svg = sdk.generateBadgeSVG(2, 25, 1000000000000000000n, 5);
+// Use this SVG in your UI
+```

@@ -7,72 +7,19 @@ description: "API reference for utility functions"
 
 Helper functions for common operations.
 
-## formatCUSD
-
-Formats a cUSD amount for display.
-
-```typescript
-formatCUSD(amount: bigint, decimals?: number): string
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| amount | `bigint` | Amount in wei |
-| decimals | `number` (optional) | Number of decimal places (default: 2) |
-
-### Returns
-
-`string` - Formatted cUSD amount.
-
-### Example
-
-```typescript
-const amount = BigInt(123456789000000000000n); // 123.456789 cUSD
-console.log(sdk.formatCUSD(amount)); // "123.46"
-console.log(sdk.formatCUSD(amount, 4)); // "123.4568"
-```
-
-## parseCUSD
-
-Parses a cUSD string to bigint.
-
-```typescript
-parseCUSD(amount: string): bigint
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| amount | `string` | cUSD amount as string |
-
-### Returns
-
-`bigint` - Amount in wei.
-
-### Example
-
-```typescript
-const amount = sdk.parseCUSD("123.45");
-console.log(amount); // 123450000000000000000n
-```
-
 ## generateReferralLink
 
-Generates a referral link for a user.
+Generates a referral link for sharing.
 
 ```typescript
-generateReferralLink(baseUrl: string, referralCode: string): string
+generateReferralLink(referralCode: string): string
 ```
 
 ### Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| baseUrl | `string` | Base URL for the referral link |
-| referralCode | `string` | User's referral code |
+| referralCode | `string` | Referral code to include in the link |
 
 ### Returns
 
@@ -81,46 +28,103 @@ generateReferralLink(baseUrl: string, referralCode: string): string
 ### Example
 
 ```typescript
-const link = sdk.generateReferralLink("https://mydapp.com", "ABC123");
-console.log(link); // "https://mydapp.com?referral=ABC123"
+const link = sdk.generateReferralLink('REF123ABC');
+console.log('Referral link:', link);
 ```
 
-## getContractAddresses
+## getBadgeInfo
 
-Gets the addresses of deployed contracts.
+Gets information about a specific badge tier.
 
 ```typescript
-getContractAddresses(): ContractAddresses
+getBadgeInfo(tier: number): BadgeInfo
 ```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| tier | `number` | Badge tier (0-3) |
 
 ### Returns
 
-[ContractAddresses](/api-reference/typescript-types#contractaddresses) object containing contract addresses.
+[BadgeInfo](/api-reference/typescript-types#badgeinfo) object containing badge details.
 
 ### Example
 
 ```typescript
-const addresses = sdk.getContractAddresses();
-console.log(`CeloRefer contract: ${addresses.celoRefer}`);
-console.log(`Reputation NFT contract: ${addresses.reputationNFT}`);
+const badgeInfo = sdk.getBadgeInfo(2); // Gold badge
+console.log('Badge name:', badgeInfo.name);
 ```
 
-## getChainInfo
+## bpsToPercentage
 
-Gets information about the connected chain.
+Converts basis points to percentage.
 
 ```typescript
-getChainInfo(): ChainInfo
+bpsToPercentage(bps: bigint): number
 ```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| bps | `bigint` | Value in basis points |
 
 ### Returns
 
-[ChainInfo](/api-reference/typescript-types#chaininfo) object containing chain information.
+`number` - Percentage value.
 
 ### Example
 
 ```typescript
-const chainInfo = sdk.getChainInfo();
-console.log(`Chain: ${chainInfo.name}`);
-console.log(`Chain ID: ${chainInfo.id}`);
+const percentage = sdk.bpsToPercentage(500n); // 500 basis points = 5%
+console.log('Percentage:', percentage);
+```
+
+## getContractStats
+
+Gets contract statistics.
+
+```typescript
+async getContractStats(): Promise<ContractStats>
+```
+
+### Returns
+
+[ContractStats](/api-reference/typescript-types#contractstats) object containing contract statistics.
+
+### Example
+
+```typescript
+const stats = await sdk.getContractStats();
+console.log('Contract stats:', stats);
+```
+
+## generateBadgeSVG
+
+Generates an SVG badge for display.
+
+```typescript
+generateBadgeSVG(tier: number, referrals: number, earnings: bigint, rank: number): string
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| tier | `number` | Badge tier |
+| referrals | `number` | Number of referrals |
+| earnings | `bigint` | Total earnings in wei |
+| rank | `number` | User's rank |
+
+### Returns
+
+`string` - Data URI of the SVG badge.
+
+### Example
+
+```typescript
+const svg = sdk.generateBadgeSVG(2, 25, 1000000000000000000n, 5);
+// Use this SVG in your UI
 ```

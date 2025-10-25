@@ -14,13 +14,13 @@ The CeloRefer SDK is a TypeScript library built on top of viem that provides eas
 ## Installation
 
 ```bash
-npm install @celorefer/sdk viem
+npm install celorefer-sdk viem
 ```
 
 ## Initialization
 
 ```typescript
-import { CeloReferSDK } from '@celorefer/sdk';
+import { CeloReferSDK } from 'celorefer-sdk';
 import { createWalletClient, http } from 'viem';
 import { celoAlfajores } from 'viem/chains';
 
@@ -45,7 +45,8 @@ Always wrap SDK calls in try-catch blocks:
 
 ```typescript
 try {
-  await sdk.registerUser('REFERRAL_CODE');
+  const txHash = await sdk.registerUser('REF123ABC');
+  console.log('Transaction hash:', txHash);
 } catch (error) {
   console.error('Registration failed:', error.message);
 }

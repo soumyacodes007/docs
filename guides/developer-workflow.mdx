@@ -12,17 +12,18 @@ Understanding how developers integrate and work with the CeloRefer SDK.
 First, install the SDK and set up the client:
 
 ```bash
-npm install @celorefer/sdk viem
+npm install celorefer-sdk viem
 ```
 
 ```typescript
-import { CeloReferSDK } from '@celorefer/sdk';
+import { CeloReferSDK } from 'celorefer-sdk';
 import { createWalletClient, http } from 'viem';
 import { celoAlfajores } from 'viem/chains';
 
 const walletClient = createWalletClient({
   chain: celoAlfajores,
-  transport: http('YOUR_RPC_URL')
+  transport: http('YOUR_RPC_URL'),
+  account: yourAccount // from privateKeyToAccount or browser wallet
 });
 
 const sdk = CeloReferSDK.create(celoAlfajores, walletClient);
@@ -33,8 +34,13 @@ const sdk = CeloReferSDK.create(celoAlfajores, walletClient);
 To record user actions, your dApp needs to be authorized by the platform owner:
 
 ```typescript
-// This is typically done by the platform owner
-await sdk.authorizePartner(partnerContractAddress, subscriptionTier);
+// Check if authorized partner
+const isPartner = await sdk.isAuthorizedPartner(partnerAddress);
+console.log('Is authorized partner:', isPartner);
+
+// Get partner subscription details
+const subscription = await sdk.getPartnerSubscription(partnerAddress);
+console.log('Subscription tier:', subscription.tier);
 ```
 
 ## 3. Integrate User Registration
@@ -43,14 +49,23 @@ Integrate user registration into your onboarding flow:
 
 ```typescript
 // Check if user is registered
-const isRegistered = await sdk.isRegistered(userAddress);
+const userInfo = await sdk.getUserInfo(userAddress);
+const isRegistered = userInfo.referralCode !== '';
 
 if (!isRegistered) {
   // Register user with referral code from URL params
   const urlParams = new URLSearchParams(window.location.search);
   const referralCode = urlParams.get('referral');
   
-  await sdk.registerUser(referralCode || undefined);
+  if (referralCode) {
+    const txHash = await sdk.registerUser(referralCode);
+    console.log('Registration transaction:', txHash);
+  } else {
+    // Register as genesis user with custom code
+    const customCode = generateCustomCode(); // Your custom code generation logic
+    const txHash = await sdk.registerGenesisUser(customCode);
+    console.log('Genesis registration transaction:', txHash);
+  }
 }
 ```
 
@@ -59,9 +74,15 @@ if (!isRegistered) {
 Record user actions that should trigger referral rewards:
 
 ```typescript
-// Record an action worth 100 cUSD
-const actionValue = BigInt(100 * 10**18); // Convert to wei
-await sdk.recordAction(userAddress, actionValue);
+// Check if authorized partner
+const isPartner = await sdk.isAuthorizedPartner(partnerAddress);
+
+if (isPartner) {
+  // Record an action worth 100 cUSD
+  const actionValue = BigInt(100 * 10**18); // Convert to wei
+  const txHash = await sdk.recordAction(userAddress, actionValue);
+  console.log('Action recorded:', txHash);
+}
 ```
 
 ## 5. Display User Information
@@ -70,11 +91,13 @@ Show users their referral stats and earnings:
 
 ```typescript
 const userInfo = await sdk.getUserInfo(userAddress);
-const rewards = await sdk.getUserRewards(userAddress);
+const userStats = await sdk.getUserStats(userAddress);
+const badgeInfo = sdk.getBadgeInfo(userInfo.badgeTier);
 
-console.log(`Referrals: ${userInfo.referralCount}`);
-console.log(`Tier: ${userInfo.badgeTier}`);
-console.log(`Earned: ${rewards.totalEarned} cUSD`);
+console.log('Referral code:', userInfo.referralCode);
+console.log('Referral count:', userStats.totalReferrals);
+console.log('Total earnings:', userStats.totalEarnings);
+console.log('Badge tier:', badgeInfo.name);
 ```
 
 ## 6. Implement Quests
@@ -83,15 +106,20 @@ Allow users to participate in quests:
 
 ```typescript
 // Display available quests
-const quests = await sdk.getAvailableQuests();
+const quests = await sdk.listActiveQuests();
 
-// Show user progress
-const questProgress = await Promise.all(
-  quests.map(quest => sdk.getQuestProgress(quest.id, userAddress))
-);
-
-// Allow claiming completed quests
-const completedQuests = questProgress.filter(p => p.completed && !p.claimed);
+// Show user progress on each quest
+for (const quest of quests) {
+  const progress = await sdk.getUserQuestProgress(userAddress, quest.id);
+  console.log(`Quest: ${quest.name}`);
+  console.log(`Progress: ${progress.progress}/${quest.targetReferrals}`);
+  
+  if (progress.completed && !progress.claimed) {
+    // Allow user to claim reward
+    const txHash = await sdk.claimQuestReward(quest.id);
+    console.log('Quest reward claimed:', txHash);
+  }
+}
 ```
 
 ## 7. Seasonal Competition Integration
@@ -102,11 +130,15 @@ Integrate seasonal competitions:
 // Get current season
 const season = await sdk.getCurrentSeason();
 
-// Display leaderboard
-const leaderboard = await sdk.getSeasonLeaderboard(season.id, 10); // Top 10
-
-// Show user position
-const userPosition = await sdk.getUserSeasonPosition(season.id, userAddress);
+if (season.isActive) {
+  console.log('Current season:', season.name);
+  
+  // Get user's season stats
+  const seasonId = await sdk.getCurrentSeasonId();
+  const userStats = await sdk.getSeasonUserStats(seasonId, userAddress);
+  console.log('Season rank:', userStats.rank);
+  console.log('Season referrals:', userStats.referrals);
+}
 ```
 
 ## 8. Reputation NFT Integration
@@ -117,9 +149,23 @@ Integrate reputation NFTs:
 // Check if user has NFT
 const hasNFT = await sdk.hasReputationNFT(userAddress);
 
-if (hasNFT) {
-  // Get NFT metadata
-  const nftMetadata = await sdk.getReputationNFTMetadata(userAddress);
-  console.log(`NFT URI: ${nftMetadata.tokenURI}`);
+if (!hasNFT) {
+  // Allow user to mint NFT
+  const txHash = await sdk.mintReputationNFT(userAddress);
+  console.log('NFT minted:', txHash);
+} else {
+  // Get NFT data
+  const nftData = await sdk.getReputationNFTData(userAddress);
+  console.log('NFT Tier:', nftData.tier);
+  console.log('NFT Referrals:', nftData.referrals);
+  
+  // Generate SVG badge for display
+  const badgeSVG = sdk.generateBadgeSVG(
+    nftData.tier,
+    nftData.referrals,
+    nftData.earnings,
+    userRank // Get from leaderboard
+  );
+  // Use badgeSVG in your UI
 }
 ```

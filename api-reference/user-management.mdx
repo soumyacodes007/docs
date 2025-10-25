@@ -7,57 +7,88 @@ description: "API reference for user registration and management"
 
 Methods for registering users and retrieving user information.
 
-## registerUser
+## create
 
-Registers a new user in the CeloRefer system.
+Creates a new instance of the CeloRefer SDK.
 
 ```typescript
-async registerUser(referralCode?: string): Promise<void>
+static create(chain: Chain, walletClient: WalletClient): CeloReferSDK
 ```
 
 ### Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| referralCode | `string` (optional) | Referral code of the referring user |
-
-### Example
-
-```typescript
-// Register with a referral code
-await sdk.registerUser('ABC123');
-
-// Register as a genesis user
-await sdk.registerUser();
-```
-
-### Events
-
-Emits a `UserRegistered` event on the blockchain.
-
-## isRegistered
-
-Checks if a user is registered in the system.
-
-```typescript
-async isRegistered(userAddress: Address): Promise<boolean>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| userAddress | `Address` | Address of the user to check |
+| chain | `Chain` | The Celo chain to connect to (e.g., celoAlfajores) |
+| walletClient | `WalletClient` | Viem wallet client with account |
 
 ### Returns
 
-`boolean` - True if the user is registered, false otherwise.
+`CeloReferSDK` - New SDK instance.
 
 ### Example
 
 ```typescript
-const registered = await sdk.isRegistered('0x1234...');
-console.log(registered); // true or false
+import { CeloReferSDK } from 'celorefer-sdk';
+import { createWalletClient, http } from 'viem';
+import { celoAlfajores } from 'viem/chains';
+
+const walletClient = createWalletClient({
+  chain: celoAlfajores,
+  transport: http()
+});
+
+const sdk = CeloReferSDK.create(celoAlfajores, walletClient);
+```
+
+## registerUser
+
+Registers a new user in the CeloRefer system with a referral code.
+
+```typescript
+async registerUser(referralCode: string): Promise<Hex>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| referralCode | `string` | Referral code of the referring user |
+
+### Returns
+
+`Hex` - Transaction hash of the registration.
+
+### Example
+
+```typescript
+const txHash = await sdk.registerUser('REF123ABC');
+console.log('Registration transaction hash:', txHash);
+```
+
+## registerGenesisUser
+
+Registers a new user as a genesis user (first user with a custom code).
+
+```typescript
+async registerGenesisUser(customCode: string): Promise<Hex>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| customCode | `string` | Custom referral code for the genesis user |
+
+### Returns
+
+`Hex` - Transaction hash of the registration.
+
+### Example
+
+```typescript
+const txHash = await sdk.registerGenesisUser('MYCODE');
+console.log('Genesis registration transaction hash:', txHash);
 ```
 
 ## getUserInfo
@@ -82,46 +113,17 @@ async getUserInfo(userAddress: Address): Promise<UserInfo>
 
 ```typescript
 const userInfo = await sdk.getUserInfo('0x1234...');
-console.log(userInfo.referralCode);
-console.log(userInfo.referralCount);
-console.log(userInfo.badgeTier);
+console.log('Referral code:', userInfo.referralCode);
+console.log('Referral count:', userInfo.referralCount);
+console.log('Badge tier:', userInfo.badgeTier);
 ```
 
-## getUserReferrer
+## getUserStats
 
-Gets the referrer of a user.
-
-```typescript
-async getUserReferrer(userAddress: Address): Promise<Address | null>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| userAddress | `Address` | Address of the user |
-
-### Returns
-
-`Address | null` - Address of the referrer, or null if the user is a genesis user.
-
-### Example
+Gets statistics for a user.
 
 ```typescript
-const referrer = await sdk.getUserReferrer('0x1234...');
-if (referrer) {
-  console.log(`Referrer: ${referrer}`);
-} else {
-  console.log('Genesis user (no referrer)');
-}
-```
-
-## generateReferralCode
-
-Generates a unique referral code for a user.
-
-```typescript
-async generateReferralCode(userAddress: Address): Promise<string>
+async getUserStats(userAddress: Address): Promise<UserStats>
 ```
 
 ### Parameters
@@ -132,11 +134,113 @@ async generateReferralCode(userAddress: Address): Promise<string>
 
 ### Returns
 
-`string` - Unique referral code for the user.
+[UserStats](/api-reference/typescript-types#userstats) object containing user statistics.
 
 ### Example
 
 ```typescript
-const code = await sdk.generateReferralCode('0x1234...');
-console.log(`Your referral code: ${code}`);
+const stats = await sdk.getUserStats('0x1234...');
+console.log('Total referrals:', stats.totalReferrals);
+console.log('Total earnings:', stats.totalEarnings);
+```
+
+## getBadgeTier
+
+Gets the badge tier for a user.
+
+```typescript
+async getBadgeTier(userAddress: Address): Promise<number>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+`number` - Badge tier (0-3 for Bronze, Silver, Gold, Platinum).
+
+### Example
+
+```typescript
+const tier = await sdk.getBadgeTier('0x1234...');
+console.log('Badge tier:', tier);
+```
+
+## getReferralCode
+
+Gets the referral code for a user.
+
+```typescript
+async getReferralCode(userAddress: Address): Promise<string>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+`string` - Referral code for the user.
+
+### Example
+
+```typescript
+const code = await sdk.getReferralCode('0x1234...');
+console.log('Referral code:', code);
+```
+
+## generateReferralLink
+
+Generates a referral link for sharing.
+
+```typescript
+generateReferralLink(referralCode: string): string
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| referralCode | `string` | Referral code to include in the link |
+
+### Returns
+
+`string` - Complete referral link.
+
+### Example
+
+```typescript
+const link = sdk.generateReferralLink('REF123ABC');
+console.log('Referral link:', link);
+```
+
+## getBadgeInfo
+
+Gets information about a specific badge tier.
+
+```typescript
+getBadgeInfo(tier: number): BadgeInfo
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| tier | `number` | Badge tier (0-3) |
+
+### Returns
+
+[BadgeInfo](/api-reference/typescript-types#badgeinfo) object containing badge details.
+
+### Example
+
+```typescript
+const badgeInfo = sdk.getBadgeInfo(2); // Gold badge
+console.log('Badge name:', badgeInfo.name);
+console.log('Level 1 rate:', badgeInfo.level1Rate);
 ```

@@ -16,19 +16,25 @@ description: "Learn how to install and set up the CeloRefer SDK"
 Install the CeloRefer SDK and its peer dependencies using npm:
 
 ```bash
-npm install @celorefer/sdk viem
+npm install celorefer-sdk viem
 ```
 
 Or with yarn:
 
 ```bash
-yarn add @celorefer/sdk viem
+yarn add celorefer-sdk viem
 ```
 
 Or with pnpm:
 
 ```bash
-pnpm add @celorefer/sdk viem
+pnpm add celorefer-sdk viem
+```
+
+Or with bun:
+
+```bash
+bun add celorefer-sdk viem
 ```
 
 ## Peer Dependencies
@@ -54,7 +60,7 @@ The SDK is written in TypeScript and includes type definitions. No additional se
 ## Basic Setup
 
 ```typescript
-import { CeloReferSDK } from '@celorefer/sdk';
+import { CeloReferSDK } from 'celorefer-sdk';
 import { createWalletClient, http } from 'viem';
 import { celoAlfajores } from 'viem/chains';
 

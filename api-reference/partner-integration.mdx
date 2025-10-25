@@ -7,90 +7,6 @@ description: "API reference for partner authorization and management"
 
 Methods for partner authorization and management.
 
-## authorizePartner
-
-Authorizes a partner contract (platform owner only).
-
-```typescript
-async authorizePartner(partnerAddress: Address, tier: number): Promise<void>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| partnerAddress | `Address` | Address of the partner contract |
-| tier | `number` | Subscription tier (0=Free, 1=Basic, 2=Pro, 3=Enterprise) |
-
-### Example
-
-```typescript
-// Authorize partner with Pro tier (2)
-await sdk.authorizePartner('0x5678...', 2);
-```
-
-### Requirements
-
-- Only platform owner can call this method
-
-### Events
-
-Emits a `PartnerAuthorized` event on the blockchain.
-
-## deauthorizePartner
-
-Deauthorizes a partner contract (platform owner only).
-
-```typescript
-async deauthorizePartner(partnerAddress: Address): Promise<void>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| partnerAddress | `Address` | Address of the partner contract |
-
-### Example
-
-```typescript
-await sdk.deauthorizePartner('0x5678...');
-```
-
-### Requirements
-
-- Only platform owner can call this method
-
-### Events
-
-Emits a `PartnerDeauthorized` event on the blockchain.
-
-## getPartnerInfo
-
-Gets information about a partner.
-
-```typescript
-async getPartnerInfo(partnerAddress: Address): Promise<PartnerInfo>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| partnerAddress | `Address` | Address of the partner contract |
-
-### Returns
-
-[PartnerInfo](/api-reference/typescript-types#partnerinfo) object containing partner details.
-
-### Example
-
-```typescript
-const partnerInfo = await sdk.getPartnerInfo('0x5678...');
-console.log(`Authorized: ${partnerInfo.authorized}`);
-console.log(`Tier: ${partnerInfo.tier}`);
-```
-
 ## isAuthorizedPartner
 
 Checks if an address is an authorized partner.
@@ -113,15 +29,41 @@ async isAuthorizedPartner(partnerAddress: Address): Promise<boolean>
 
 ```typescript
 const isPartner = await sdk.isAuthorizedPartner('0x5678...');
-console.log(`Is partner: ${isPartner}`);
+console.log('Is partner:', isPartner);
 ```
 
-## getPlatformFeePercentage
+## getPartnerSubscription
+
+Gets subscription details for a partner.
+
+```typescript
+async getPartnerSubscription(partnerAddress: Address): Promise<PartnerSubscription>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| partnerAddress | `Address` | Address of the partner |
+
+### Returns
+
+[PartnerSubscription](/api-reference/typescript-types#partnersubscription) object containing subscription details.
+
+### Example
+
+```typescript
+const subscription = await sdk.getPartnerSubscription('0x5678...');
+console.log('Subscription tier:', subscription.tier);
+console.log('Expiry time:', subscription.expiryTime);
+```
+
+## getPlatformFee
 
 Gets the current platform fee percentage.
 
 ```typescript
-async getPlatformFeePercentage(): Promise<number>
+async getPlatformFee(): Promise<number>
 ```
 
 ### Returns
@@ -131,36 +73,57 @@ async getPlatformFeePercentage(): Promise<number>
 ### Example
 
 ```typescript
-const feePercent = await sdk.getPlatformFeePercentage();
-console.log(`Platform fee: ${feePercent / 100}%`);
+const fee = await sdk.getPlatformFee();
+console.log('Platform fee:', fee / 100, '%');
 ```
 
-## setPlatformFeePercentage
+## getTreasury
 
-Sets the platform fee percentage (platform owner only).
+Gets the treasury address.
 
 ```typescript
-async setPlatformFeePercentage(percentage: number): Promise<void>
+async getTreasury(): Promise<Address>
+```
+
+### Returns
+
+`Address` - Treasury address.
+
+### Example
+
+```typescript
+const treasury = await sdk.getTreasury();
+console.log('Treasury address:', treasury);
+```
+
+## recordAction
+
+Records a user action that triggers referral rewards (partner-only method).
+
+```typescript
+async recordAction(userAddress: Address, actionValue: bigint): Promise<Hex>
 ```
 
 ### Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| percentage | `number` | Fee percentage in basis points (e.g., 1500 = 15%) |
+| userAddress | `Address` | Address of the user performing the action |
+| actionValue | `bigint` | Value of the action in wei |
+
+### Returns
+
+`Hex` - Transaction hash of the action recording.
 
 ### Example
 
 ```typescript
-// Set platform fee to 15%
-await sdk.setPlatformFeePercentage(1500);
+// Check if authorized partner
+const isPartner = await sdk.isAuthorizedPartner(partnerAddress);
+
+if (isPartner) {
+  const actionValue = 1000000000000000000n; // 1 cUSD
+  const txHash = await sdk.recordAction('0x1234...', actionValue);
+  console.log('Action recorded:', txHash);
+}
 ```
-
-### Requirements
-
-- Only platform owner can call this method
-- Percentage must be between 0 and 5000 (0-50%)
-
-### Events
-
-Emits a `PlatformFeeUpdated` event on the blockchain.

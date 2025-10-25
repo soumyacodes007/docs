@@ -12,51 +12,7 @@ Methods for working with badge tiers and the reputation system.
 Gets the badge tier for a user based on their referral count.
 
 ```typescript
-async getBadgeTier(referralCount: number): Promise<BadgeTier>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| referralCount | `number` | Number of referrals |
-
-### Returns
-
-[BadgeTier](/api-reference/typescript-types#badgetier) - The badge tier.
-
-### Example
-
-```typescript
-const tier = await sdk.getBadgeTier(15);
-console.log(tier); // 'Gold'
-```
-
-## getBadgeRequirements
-
-Gets the requirements for each badge tier.
-
-```typescript
-async getBadgeRequirements(): Promise<BadgeRequirements>
-```
-
-### Returns
-
-[BadgeRequirements](/api-reference/typescript-types#badgerequirements) object containing requirements for each tier.
-
-### Example
-
-```typescript
-const requirements = await sdk.getBadgeRequirements();
-console.log(`Gold tier requires: ${requirements.Gold.minReferrals} referrals`);
-```
-
-## getUserBadgeProgress
-
-Gets a user's progress toward the next badge tier.
-
-```typescript
-async getUserBadgeProgress(userAddress: Address): Promise<BadgeProgress>
+async getBadgeTier(userAddress: Address): Promise<number>
 ```
 
 ### Parameters
@@ -67,52 +23,55 @@ async getUserBadgeProgress(userAddress: Address): Promise<BadgeProgress>
 
 ### Returns
 
-[BadgeProgress](/api-reference/typescript-types#badgeprogress) object containing progress information.
+`number` - Badge tier (0-3 for Bronze, Silver, Gold, Platinum).
 
 ### Example
 
 ```typescript
-const progress = await sdk.getUserBadgeProgress('0x1234...');
-console.log(`Current tier: ${progress.currentTier}`);
-console.log(`Next tier: ${progress.nextTier}`);
-console.log(`Referrals needed: ${progress.referralsNeeded}`);
+const tier = await sdk.getBadgeTier('0x1234...');
+console.log('Badge tier:', tier);
 ```
 
-## getAllBadgeTiers
+## getBadgeInfo
 
-Gets all available badge tiers.
+Gets information about a specific badge tier.
 
 ```typescript
-async getAllBadgeTiers(): Promise<BadgeTier[]>
+getBadgeInfo(tier: number): BadgeInfo
 ```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| tier | `number` | Badge tier (0-3) |
 
 ### Returns
 
-Array of [BadgeTier](/api-reference/typescript-types#badgetier) values.
+[BadgeInfo](/api-reference/typescript-types#badgeinfo) object containing badge details.
 
 ### Example
 
 ```typescript
-const tiers = await sdk.getAllBadgeTiers();
-console.log(tiers); // ['Bronze', 'Silver', 'Gold', 'Platinum']
+const badgeInfo = sdk.getBadgeInfo(2); // Gold badge
+console.log('Badge name:', badgeInfo.name);
+console.log('Level 1 rate:', badgeInfo.level1Rate);
 ```
 
-## getPlatformStats
+## Badge Tiers
 
-Gets platform-wide statistics about badge distribution.
+The CeloRefer system includes a tiered badge system based on referral count:
 
-```typescript
-async getPlatformStats(): Promise<PlatformStats>
-```
+| Tier | Name | Threshold | Level 1 Rate | Level 2 Rate |
+|------|------|-----------|--------------|---------------|
+| 0 | Bronze | 0+ | 5% | 2% |
+| 1 | Silver | 5+ | 6% | 2.5% |
+| 2 | Gold | 15+ | 7% | 3% |
+| 3 | Platinum | 50+ | 8% | 3.5% |
 
-### Returns
+### Benefits by Tier
 
-[PlatformStats](/api-reference/typescript-types#platformstats) object containing platform statistics.
-
-### Example
-
-```typescript
-const stats = await sdk.getPlatformStats();
-console.log(`Bronze users: ${stats.badgeDistribution.Bronze}`);
-console.log(`Silver users: ${stats.badgeDistribution.Silver}`);
-```
+- **Bronze**: Starting tier for new users
+- **Silver**: Improved reward rates + quest access
+- **Gold**: Premium features + priority support
+- **Platinum**: Elite status + maximum benefits + exclusive perks

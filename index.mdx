@@ -5,7 +5,7 @@ description: "Build viral growth loops with incentivized referrals on Celo block
 
 <Hero
   title="CeloRefer SDK"
-  subtitle="Build viral growth loops with incentivized referrals on Celo blockchain"
+  subtitle="A TypeScript SDK for interacting with the CeloRefer referral system on the Celo blockchain"
   icon="users"
   accentColor="#35D07F"
 >
@@ -21,37 +21,61 @@ description: "Build viral growth loops with incentivized referrals on Celo block
   title="Core Features"
   features={[
     {
-      title: "Multi-Level Referral System",
-      description: "Two-tier referral tree with dynamic reward rates based on badge tiers",
-      icon: "sitemap"
+      title: "User Management",
+      description: "Registration with referral codes and genesis user setup",
+      icon: "user-plus"
     },
     {
-      title: "Badge & Reputation System",
-      description: "Users earn badges and soulbound NFTs representing on-chain reputation",
+      title: "Badge System",
+      description: "Dynamic tier system (Bronze, Silver, Gold, Platinum) based on referrals",
       icon: "award"
     },
     {
+      title: "Dynamic Rewards",
+      description: "Multi-level referral rewards with tier-based multipliers",
+      icon: "coins"
+    },
+    {
       title: "Quest System",
-      description: "Create milestone-based challenges with cUSD rewards for completion",
+      description: "Gamified challenges with rewards for completing milestones",
       icon: "gamepad"
     },
     {
       title: "Seasonal Competitions",
-      description: "Run time-bound competitions with prize pools and leaderboards",
+      description: "Time-based leaderboards with prize pools",
       icon: "trophy"
     },
     {
-      title: "Partner Integration",
-      description: "White-label support for dApps with tiered subscription model",
-      icon: "handshake"
-    },
-    {
-      title: "TypeScript SDK",
-      description: "Easy integration with viem for modern web3 development",
-      icon: "code"
+      title: "Reputation NFTs",
+      description: "On-chain achievement badges with dynamic metadata",
+      icon: "image"
     }
   ]}
 />
+
+<Section title="Quick Start">
+
+```bash
+npm install celorefer-sdk viem
+```
+
+```typescript
+import { CeloReferSDK } from 'celorefer-sdk';
+import { createWalletClient, http } from 'viem';
+import { celoAlfajores } from 'viem/chains';
+
+const walletClient = createWalletClient({
+  chain: celoAlfajores,
+  transport: http()
+});
+
+const sdk = CeloReferSDK.create(celoAlfajores, walletClient);
+
+// Register with a referral code
+const txHash = await sdk.registerUser('REF123ABC');
+```
+
+</Section>
 
 <Section title="How It Works" subtitle="Simple integration for different stakeholders">
 
@@ -78,9 +102,9 @@ description: "Build viral growth loops with incentivized referrals on Celo block
       content: (
         <Steps
           steps={[
-            "**Deploy/Connect**: Deploy contracts or connect to existing system",
-            "**Integrate SDK**: Install and initialize CeloRefer SDK",
-            "**Authorize**: Get your dApp authorized as a partner",
+            "**Install SDK**: Add celorefer-sdk and viem to your project",
+            "**Initialize**: Create SDK instance with wallet client",
+            "**Integrate**: Add referral registration to your user flow",
             "**Record Actions**: Call `recordAction()` when users perform valuable actions",
             "**Automatic Rewards**: System automatically distributes rewards to referrers",
             "**Customize**: Create custom quests, seasons, and branding"
@@ -93,11 +117,11 @@ description: "Build viral growth loops with incentivized referrals on Celo block
       content: (
         <Steps
           steps={[
-            "**Manage Partners**: Authorize/deauthorize partner dApps",
+            "**Deploy Contracts**: Deploy CeloRefer contracts to Celo network",
             "**Set Fees**: Configure platform fee percentage",
+            "**Authorize Partners**: Authorize partner DApps",
             "**Create Quests**: Design milestone challenges with rewards",
             "**Run Seasons**: Launch time-bound competitions",
-            "**Collect Fees**: Receive platform fees in treasury",
             "**Monitor Growth**: Track ecosystem metrics"
           ]}
         />
@@ -108,46 +132,26 @@ description: "Build viral growth loops with incentivized referrals on Celo block
 
 </Section>
 
-<Section title="Key Components">
+<Section title="Badge System">
 
-<Columns cols={2}>
-  <Card title="Smart Contracts" icon="file-contract">
-    <p>Secure and audited smart contracts built with Solidity and OpenZeppelin:</p>
-    <ul>
-      <li>CeloReferEnhanced.sol - Main referral system</li>
-      <li>ReputationNFT.sol - Soulbound reputation tokens</li>
-      <li>DemoDApp.sol - Example integration</li>
-    </ul>
-  </Card>
-  
-  <Card title="TypeScript SDK" icon="code">
-    <p>Modern SDK built with viem for seamless integration:</p>
-    <ul>
-      <li>Type-safe contract interactions</li>
-      <li>Comprehensive API coverage</li>
-      <li>Easy setup and configuration</li>
-    </ul>
-  </Card>
-</Columns>
+| Tier | Name | Threshold | Level 1 Rate | Level 2 Rate |
+|------|------|-----------|--------------|---------------|
+| 0 | Bronze | 0+ | 5% | 2% |
+| 1 | Silver | 5+ | 6% | 2.5% |
+| 2 | Gold | 15+ | 7% | 3% |
+| 3 | Platinum | 50+ | 8% | 3.5% |
 
 </Section>
 
-<Section title="Token Economics">
+<Section title="Deployed Contracts">
 
-<Card title="Reward Distribution Model" icon="chart-line">
-  <p>For every action worth 100 cUSD:</p>
-  <ul>
-    <li><strong>Platform Fee</strong>: 15 cUSD (15%) → Treasury</li>
-    <li><strong>Referrer Rewards</strong>: 85 cUSD distributed to referrers</li>
-  </ul>
-  <p>Reward rates based on badge tiers:</p>
-  <ul>
-    <li>🥉 <strong>Bronze</strong> (0-4 referrals): 5% + 2%</li>
-    <li>🥈 <strong>Silver</strong> (5-14 referrals): 10% + 4%</li>
-    <li>🥇 <strong>Gold</strong> (15-49 referrals): 15% + 6%</li>
-    <li>💎 <strong>Platinum</strong> (50+ referrals): 20% + 8%</li>
-  </ul>
-</Card>
+**Network:** Celo Sepolia Testnet (Chain ID: 11142220)
+
+| Contract | Address |
+|----------|----------|
+| CeloReferEnhanced | `0xCCAddAC9Ac91D548ada36684dB2b3796A0c7Ea73` |
+| ReputationNFT | `0xe667437aF0424Ee9cb983b755Ccccf218779E37b` |
+| cUSD | `0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b` |
 
 </Section>
 

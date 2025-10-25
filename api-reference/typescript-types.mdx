@@ -15,91 +15,57 @@ Complete reference for all TypeScript types used in the CeloRefer SDK.
 interface UserInfo {
   referralCode: string;
   referralCount: number;
-  badgeTier: BadgeTier;
+  badgeTier: number;
   registeredAt: number; // Unix timestamp
   referrer: Address | null;
 }
 ```
 
-### UserRewards
+### UserStats
 
 ```typescript
-interface UserRewards {
-  totalEarned: bigint; // In wei
-  available: bigint;   // In wei
-  claimed: bigint;     // In wei
-}
-```
-
-### ReferralTree
-
-```typescript
-interface ReferralTree {
-  directReferrals: Address[];
-  secondLevelReferrals: Address[];
+interface UserStats {
+  totalReferrals: number;
+  totalEarnings: bigint; // In wei
+  currentTier: number;
+  nextTierProgress: number; // Percentage to next tier
 }
 ```
 
 ## Badge Types
 
-### BadgeTier
+### BadgeInfo
 
 ```typescript
-type BadgeTier = 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
+interface BadgeInfo {
+  name: string;
+  minReferrals: number;
+  level1Rate: number; // In basis points
+  level2Rate: number; // In basis points
+  color: string;
+}
 ```
 
 ### RewardRates
 
 ```typescript
 interface RewardRates {
-  level1: number; // Percentage for direct referrer
-  level2: number; // Percentage for parent referrer
-}
-```
-
-### BadgeRequirements
-
-```typescript
-interface BadgeRequirements {
-  Bronze: { minReferrals: number; maxReferrals: number };
-  Silver: { minReferrals: number; maxReferrals: number };
-  Gold: { minReferrals: number; maxReferrals: number };
-  Platinum: { minReferrals: number; maxReferrals: number };
-}
-```
-
-### BadgeProgress
-
-```typescript
-interface BadgeProgress {
-  currentTier: BadgeTier;
-  nextTier: BadgeTier | null;
-  referralsNeeded: number;
-}
-```
-
-### PlatformStats
-
-```typescript
-interface PlatformStats {
-  badgeDistribution: Record<BadgeTier, number>;
-  totalUsers: number;
-  totalReferrals: number;
+  level1Bps: bigint; // Basis points for direct referrer
+  level2Bps: bigint; // Basis points for parent referrer
 }
 ```
 
 ## NFT Types
 
-### NFTMetadata
+### ReputationNFTData
 
 ```typescript
-interface NFTMetadata {
-  name: string;
-  description: string;
-  image: string;
-  badgeTier: BadgeTier;
-  referralCount: number;
-  tokenURI: string;
+interface ReputationNFTData {
+  tier: number;
+  referrals: number;
+  earnings: bigint; // In wei
+  mintedAt: number; // Unix timestamp
+  tokenId: bigint;
 }
 ```
 
@@ -109,10 +75,10 @@ interface NFTMetadata {
 
 ```typescript
 interface Quest {
-  id: bigint;
+  id: number;
   name: string;
   description: string;
-  targetReferralCount: number;
+  targetReferrals: number;
   rewardAmount: bigint; // In wei
   startTime: number; // Unix timestamp
   endTime: number; // Unix timestamp
@@ -120,28 +86,16 @@ interface Quest {
 }
 ```
 
-### QuestProgress
+### UserQuestProgress
 
 ```typescript
-interface QuestProgress {
-  questId: bigint;
+interface UserQuestProgress {
+  questId: number;
   user: Address;
-  referrals: number;
+  progress: number; // Current referral count
+  target: number; // Target referral count
   completed: boolean;
   claimed: boolean;
-}
-```
-
-### CreateQuestParams
-
-```typescript
-interface CreateQuestParams {
-  name: string;
-  description: string;
-  targetReferralCount: number;
-  rewardAmount: bigint; // In wei
-  startTime: number; // Unix timestamp
-  endTime: number; // Unix timestamp
 }
 ```
 
@@ -151,96 +105,76 @@ interface CreateQuestParams {
 
 ```typescript
 interface Season {
-  id: bigint;
+  id: number;
   name: string;
   description: string;
   startTime: number; // Unix timestamp
   endTime: number; // Unix timestamp
-  prizePool: bigint; // In wei
+  totalPrizePool: bigint; // In wei
+  winnersCount: number;
   isActive: boolean;
 }
 ```
 
-### LeaderboardEntry
+### SeasonUserStats
 
 ```typescript
-interface LeaderboardEntry {
+interface SeasonUserStats {
+  seasonId: number;
   user: Address;
-  score: number; // Referral count
-  position: number;
-}
-```
-
-### SeasonStats
-
-```typescript
-interface SeasonStats {
-  totalParticipants: number;
-  totalReferrals: number;
-  prizePool: bigint; // In wei
-}
-```
-
-### CreateSeasonParams
-
-```typescript
-interface CreateSeasonParams {
-  name: string;
-  description: string;
-  startTime: number; // Unix timestamp
-  endTime: number; // Unix timestamp
-  prizePool: bigint; // In wei
+  referrals: number;
+  earnings: bigint; // In wei
+  rank: number;
 }
 ```
 
 ## Partner Types
 
-### PartnerInfo
+### PartnerSubscription
 
 ```typescript
-interface PartnerInfo {
-  authorized: boolean;
+interface PartnerSubscription {
+  partner: Address;
   tier: number; // 0=Free, 1=Basic, 2=Pro, 3=Enterprise
-  authorizedAt: number; // Unix timestamp
+  expiryTime: number; // Unix timestamp
+  isActive: boolean;
 }
 ```
 
 ## Leaderboard Types
+
+### LeaderboardUser
+
+```typescript
+interface LeaderboardUser {
+  rank: number;
+  address: Address;
+  referralCount: number;
+  totalEarnings: bigint; // In wei
+}
+```
 
 ### LeaderboardStats
 
 ```typescript
 interface LeaderboardStats {
   totalUsers: number;
-  usersInLeaderboard: number;
+  totalReferrals: number;
   lastUpdated: number; // Unix timestamp
 }
 ```
 
 ## Utility Types
 
-### ContractAddresses
+### ContractStats
 
 ```typescript
-interface ContractAddresses {
-  celoRefer: Address;
-  reputationNFT: Address;
-  demoDApp: Address;
-}
-```
-
-### ChainInfo
-
-```typescript
-interface ChainInfo {
-  id: number;
-  name: string;
-  nativeCurrency: {
-    name: string;
-    symbol: string;
-    decimals: number;
-  };
-  rpcUrls: string[];
+interface ContractStats {
+  totalUsers: number;
+  totalReferrals: number;
+  totalQuests: number;
+  totalSeasons: number;
+  platformFeeBps: number;
 }
 ```
 
@@ -248,4 +182,10 @@ interface ChainInfo {
 
 ```typescript
 type Address = \`0x\${string}\`;
+```
+
+## Hex Type
+
+```typescript
+type Hex = \`0x\${string}\`;
 ```

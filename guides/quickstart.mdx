@@ -16,7 +16,15 @@ Get your CeloRefer integration up and running in minutes.
 ## Installation
 
 ```bash
-npm install @celorefer/sdk viem
+npm install celorefer-sdk viem
+```
+
+Or with other package managers:
+
+```bash
+yarn add celorefer-sdk viem
+pnpm add celorefer-sdk viem
+bun add celorefer-sdk viem
 ```
 
 ## Setup
@@ -24,17 +32,15 @@ npm install @celorefer/sdk viem
 First, import the SDK and create a wallet client:
 
 ```typescript
-import { CeloReferSDK } from '@celorefer/sdk';
+import { CeloReferSDK } from 'celorefer-sdk';
 import { createWalletClient, http } from 'viem';
 import { celoAlfajores } from 'viem/chains';
-import { privateKeyToAccount } from 'viem/accounts';
 
 // Create wallet client
-const account = privateKeyToAccount('0x...');
 const walletClient = createWalletClient({
-  account,
   chain: celoAlfajores,
-  transport: http('YOUR_RPC_URL')
+  transport: http('YOUR_RPC_URL'),
+  account: yourAccount // from privateKeyToAccount or browser wallet
 });
 
 // Initialize the SDK
@@ -44,11 +50,13 @@ const sdk = CeloReferSDK.create(celoAlfajores, walletClient);
 ## Register a User
 
 ```typescript
-// Register a new user with a referral code
-await sdk.registerUser('REFERRAL_CODE');
+// Register with a referral code
+const txHash = await sdk.registerUser('REF123ABC');
+console.log('Registration transaction hash:', txHash);
 
-// Or register as a genesis user (no referrer)
-await sdk.registerUser();
+// Register as genesis user (first user)
+const genesisTxHash = await sdk.registerGenesisUser('MYCODE');
+console.log('Genesis registration transaction hash:', genesisTxHash);
 ```
 
 ## Check User Information
@@ -56,14 +64,20 @@ await sdk.registerUser();
 ```typescript
 // Get user information
 const userInfo = await sdk.getUserInfo(userAddress);
-console.log(userInfo);
+console.log('User info:', userInfo);
+
+// Get badge tier
+const badgeTier = await sdk.getBadgeTier(userAddress);
+console.log('Badge tier:', badgeTier);
 ```
 
 ## Record an Action (For Partners)
 
 ```typescript
 // Record a user action (only authorized partners can call this)
-await sdk.recordAction(userAddress, BigInt(100 * 10**18)); // 100 cUSD in wei
+const actionValue = 1000000000000000000n; // 1 cUSD in wei
+const txHash = await sdk.recordAction(userAddress, actionValue);
+console.log('Action recorded:', txHash);
 ```
 
 ## Next Steps

@@ -7,89 +7,57 @@ description: "API reference for quest creation and management"
 
 Methods for working with the quest system.
 
-## createQuest
+## getQuest
 
-Creates a new quest (platform owner only).
+Gets details for a specific quest.
 
 ```typescript
-async createQuest(params: CreateQuestParams): Promise<void>
+async getQuest(questId: number): Promise<Quest>
 ```
 
 ### Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| params | [CreateQuestParams](/api-reference/typescript-types#createquestparams) | Quest creation parameters |
-
-### Example
-
-```typescript
-const questParams = {
-  name: "First 5 Referrals",
-  description: "Refer 5 users to earn a reward",
-  targetReferralCount: 5,
-  rewardAmount: BigInt(50 * 10**18), // 50 cUSD
-  startTime: Math.floor(Date.now() / 1000),
-  endTime: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60 // 30 days
-};
-
-await sdk.createQuest(questParams);
-```
-
-### Requirements
-
-- Only platform owner can call this method
-
-### Events
-
-Emits a `QuestCreated` event on the blockchain.
-
-## getAvailableQuests
-
-Gets all available quests.
-
-```typescript
-async getAvailableQuests(): Promise<Quest[]>
-```
+| questId | `number` | ID of the quest |
 
 ### Returns
 
-Array of [Quest](/api-reference/typescript-types#quest) objects.
+[Quest](/api-reference/typescript-types#quest) object containing quest details.
 
 ### Example
 
 ```typescript
-const quests = await sdk.getAvailableQuests();
-quests.forEach(quest => {
-  console.log(`${quest.name}: ${quest.description}`);
-});
+const quest = await sdk.getQuest(1);
+console.log('Quest name:', quest.name);
+console.log('Target referrals:', quest.targetReferrals);
 ```
 
-## getQuestProgress
+## getUserQuestProgress
 
 Gets a user's progress on a specific quest.
 
 ```typescript
-async getQuestProgress(questId: bigint, userAddress: Address): Promise<QuestProgress>
+async getUserQuestProgress(userAddress: Address, questId: number): Promise<UserQuestProgress>
 ```
 
 ### Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| questId | `bigint` | ID of the quest |
 | userAddress | `Address` | Address of the user |
+| questId | `number` | ID of the quest |
 
 ### Returns
 
-[QuestProgress](/api-reference/typescript-types#questprogress) object containing progress information.
+[UserQuestProgress](/api-reference/typescript-types#userquestprogress) object containing progress information.
 
 ### Example
 
 ```typescript
-const progress = await sdk.getQuestProgress(1n, '0x1234...');
-console.log(`Completed: ${progress.completed}`);
-console.log(`Claimed: ${progress.claimed}`);
+const progress = await sdk.getUserQuestProgress('0x1234...', 1);
+console.log('Progress:', progress.progress);
+console.log('Completed:', progress.completed);
 ```
 
 ## claimQuestReward
@@ -97,36 +65,35 @@ console.log(`Claimed: ${progress.claimed}`);
 Claims the reward for a completed quest.
 
 ```typescript
-async claimQuestReward(questId: bigint): Promise<void>
+async claimQuestReward(questId: number): Promise<Hex>
 ```
 
 ### Parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| questId | `bigint` | ID of the quest |
+| questId | `number` | ID of the quest |
+
+### Returns
+
+`Hex` - Transaction hash of the reward claim.
 
 ### Example
 
 ```typescript
-await sdk.claimQuestReward(1n);
+const progress = await sdk.getUserQuestProgress('0x1234...', 1);
+if (progress.completed) {
+  const txHash = await sdk.claimQuestReward(1);
+  console.log('Claimed quest reward:', txHash);
+}
 ```
 
-### Requirements
+## listActiveQuests
 
-- Quest must be completed
-- Reward must not have been claimed yet
-
-### Events
-
-Emits a `QuestRewardClaimed` event on the blockchain.
-
-## getAllQuests
-
-Gets all quests (including completed/ended ones).
+Lists all active quests.
 
 ```typescript
-async getAllQuests(): Promise<Quest[]>
+async listActiveQuests(): Promise<Quest[]>
 ```
 
 ### Returns
@@ -136,6 +103,25 @@ Array of [Quest](/api-reference/typescript-types#quest) objects.
 ### Example
 
 ```typescript
-const allQuests = await sdk.getAllQuests();
-console.log(`Total quests: ${allQuests.length}`);
+const quests = await sdk.listActiveQuests();
+console.log('Active quests:', quests.length);
+```
+
+## getQuestCount
+
+Gets the total number of quests.
+
+```typescript
+async getQuestCount(): Promise<number>
+```
+
+### Returns
+
+`number` - Total quest count.
+
+### Example
+
+```typescript
+const count = await sdk.getQuestCount();
+console.log('Total quests:', count);
 ```
