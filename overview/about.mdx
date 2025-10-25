@@ -1,0 +1,53 @@
+---
+title: "About CeloRefer"
+description: "Learn about CeloRefer - a decentralized referral system on Celo blockchain"
+---
+
+# About CeloRefer
+
+CeloRefer is a comprehensive, blockchain-based referral and reputation system built on the Celo blockchain. It enables applications to implement gamified referral programs with multi-level rewards, reputation NFTs, quests, seasonal competitions, and white-label partner integrations.
+
+## What is CeloRefer?
+
+CeloRefer is a **smart contract infrastructure** combined with a **TypeScript SDK** that allows developers to:
+- Build viral growth loops with incentivized referrals
+- Track and reward user actions across their dApps
+- Create gamified experiences with quests and seasonal competitions
+- Issue soulbound reputation NFTs to users
+- Manage tiered reward systems with dynamic rates
+
+## Key Components
+
+### 1. Smart Contracts
+
+#### CeloReferEnhanced.sol
+The main referral system contract that handles:
+- User registration with referral codes
+- Two-level referral tree (direct referrer + parent referrer)
+- Dynamic reward distribution based on badge tiers
+- Quest system for milestone achievements
+- Seasonal competitions with prize pools
+- Partner authorization and platform fee management
+- White-label subscription tiers
+
+#### ReputationNFT.sol
+A soulbound (non-transferable) NFT contract that:
+- Mints unique reputation NFTs for users
+- Represents on-chain reputation and achievement
+- Cannot be transferred (soulbound token)
+- Provides dynamic metadata based on user stats
+
+#### DemoDApp.sol
+Example integration contract demonstrating:
+- Staking cUSD tokens
+- Automatic referral registration on first action
+- Integration with CeloRefer reward distribution
+
+### 2. CeloRefer SDK
+
+A TypeScript SDK built with **viem** that provides:
+- Easy integration with CeloRefer contracts
+- Type-safe contract interactions
+- Comprehensive API for all contract features
+- Support for read and write operations
+- Built for modern web3 development

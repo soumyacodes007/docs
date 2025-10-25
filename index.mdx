@@ -1,97 +1,133 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "CeloRefer SDK - Decentralized Referral System"
+description: "Build viral growth loops with incentivized referrals on Celo blockchain"
 ---
 
-## Setting up
-
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
+<Hero
+  title="CeloRefer SDK"
+  subtitle="Build viral growth loops with incentivized referrals on Celo blockchain"
+  icon="users"
+  accentColor="#35D07F"
 >
-  Follow our three step quickstart guide.
-</Card>
+  <Button href="/guides/quickstart" variant="primary">
+    Get Started
+  </Button>
+  <Button href="/api-reference/introduction" variant="secondary">
+    API Reference
+  </Button>
+</Hero>
 
-## Make it yours
+<Features
+  title="Core Features"
+  features={[
+    {
+      title: "Multi-Level Referral System",
+      description: "Two-tier referral tree with dynamic reward rates based on badge tiers",
+      icon: "sitemap"
+    },
+    {
+      title: "Badge & Reputation System",
+      description: "Users earn badges and soulbound NFTs representing on-chain reputation",
+      icon: "award"
+    },
+    {
+      title: "Quest System",
+      description: "Create milestone-based challenges with cUSD rewards for completion",
+      icon: "gamepad"
+    },
+    {
+      title: "Seasonal Competitions",
+      description: "Run time-bound competitions with prize pools and leaderboards",
+      icon: "trophy"
+    },
+    {
+      title: "Partner Integration",
+      description: "White-label support for dApps with tiered subscription model",
+      icon: "handshake"
+    },
+    {
+      title: "TypeScript SDK",
+      description: "Easy integration with viem for modern web3 development",
+      icon: "code"
+    }
+  ]}
+/>
 
-Design a docs site that looks great and empowers your users.
+<Section title="How It Works" subtitle="Simple integration for different stakeholders">
+
+<Tabs
+  tabs={[
+    {
+      label: "For Users",
+      content: (
+        <Steps
+          steps={[
+            "**Register**: Sign up with a referral code or as genesis user",
+            "**Get Your Code**: Receive a unique referral code",
+            "**Share**: Invite friends using your referral link",
+            "**Earn**: Receive rewards when referrals perform actions",
+            "**Level Up**: Earn badges as you refer more users",
+            "**Compete**: Participate in quests and seasonal competitions",
+            "**Collect**: Mint your reputation NFT"
+          ]}
+        />
+      )
+    },
+    {
+      label: "For Developers",
+      content: (
+        <Steps
+          steps={[
+            "**Deploy/Connect**: Deploy contracts or connect to existing system",
+            "**Integrate SDK**: Install and initialize CeloRefer SDK",
+            "**Authorize**: Get your dApp authorized as a partner",
+            "**Record Actions**: Call `recordAction()` when users perform valuable actions",
+            "**Automatic Rewards**: System automatically distributes rewards to referrers",
+            "**Customize**: Create custom quests, seasons, and branding"
+          ]}
+        />
+      )
+    },
+    {
+      label: "For Platforms",
+      content: (
+        <Steps
+          steps={[
+            "**Manage Partners**: Authorize/deauthorize partner dApps",
+            "**Set Fees**: Configure platform fee percentage",
+            "**Create Quests**: Design milestone challenges with rewards",
+            "**Run Seasons**: Launch time-bound competitions",
+            "**Collect Fees**: Receive platform fees in treasury",
+            "**Monitor Growth**: Track ecosystem metrics"
+          ]}
+        />
+      )
+    }
+  ]}
+/>
+
+</Section>
+
+<Section title="Ready to integrate?" subtitle="Get started with CeloRefer in minutes">
 
 <Columns cols={2}>
   <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
+    title="Developer Quickstart"
+    icon="rocket"
+    href="/guides/quickstart"
+    horizontal
   >
-    Edit your docs locally and preview them in real time.
+    Follow our quickstart guide to integrate CeloRefer into your dApp.
   </Card>
+  
   <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
+    title="API Documentation"
+    icon="book"
     href="/api-reference/introduction"
+    horizontal
   >
-    Auto-generate API documentation from OpenAPI specifications.
+    Explore the complete API reference for all CeloRefer features.
   </Card>
 </Columns>
 
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+</Section>
