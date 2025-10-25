@@ -16,6 +16,29 @@ CeloRefer is a **smart contract infrastructure** combined with a **TypeScript SD
 - Issue soulbound reputation NFTs to users
 - Manage tiered reward systems with dynamic rates
 
+## Key Benefits
+
+### For Users
+✅ Earn passive income from referrals  
+✅ Unlock higher tiers and better rewards  
+✅ Compete in seasonal challenges  
+✅ Build on-chain reputation  
+✅ Receive soulbound NFT badges  
+
+### For Developers
+✅ Ready-to-use referral infrastructure  
+✅ No need to build from scratch  
+✅ Type-safe SDK with TypeScript  
+✅ Customizable quest and season systems  
+✅ White-label support  
+
+### For Platforms
+✅ Viral growth mechanism  
+✅ Sustainable revenue model (platform fees)  
+✅ Gamification increases engagement  
+✅ On-chain reputation system  
+✅ Partner ecosystem management  
+
 ## Key Components
 
 ### 1. Smart Contracts
@@ -51,3 +74,87 @@ A TypeScript SDK built with **viem** that provides:
 - Comprehensive API for all contract features
 - Support for read and write operations
 - Built for modern web3 development
+
+## Core Features
+
+### 🎯 Multi-Level Referral System
+
+**Two-tier referral tree:**
+- **Level 1 (Direct Referrer)**: Earns rewards when their direct referrals perform actions
+- **Level 2 (Parent Referrer)**: Earns rewards from their referrals' referrals
+
+**Dynamic reward rates based on badge tier:**
+- 🥉 **Bronze** (0-4 referrals): 5% + 2%
+- 🥈 **Silver** (5-14 referrals): 10% + 4%
+- 🥇 **Gold** (15-49 referrals): 15% + 6%
+- 💎 **Platinum** (50+ referrals): 20% + 8%
+
+### 🏅 Badge & Reputation System
+
+Users earn badges based on their referral performance:
+- Badges unlock higher reward rates
+- Badge tier displayed in reputation NFTs
+- Visual representation of user achievement
+- Gamification encourages viral growth
+
+### 🎮 Quest System
+
+Create milestone-based challenges:
+- Set target referral counts
+- Offer cUSD rewards for completion
+- Track user progress automatically
+- Claim rewards on completion
+- Drive specific user behaviors
+
+### 🏆 Seasonal Competitions
+
+Run time-bound competitions:
+- Define season duration and prize pool
+- Track user performance during season
+- Distribute rewards to top performers
+- Create urgency and engagement spikes
+- Build community around leaderboards
+
+### 💎 Reputation NFTs (Soulbound)
+
+Mint on-chain reputation badges:
+- Unique NFT per user (soulbound - cannot be transferred)
+- Dynamic metadata reflecting current stats
+- Visual representation of achievements
+- Portable reputation across ecosystem
+- Proof of engagement and influence
+
+### 🤝 Partner Integration
+
+White-label support for dApps:
+- Authorize partner contracts to record actions
+- Platform fee system (default 15%)
+- Tiered subscription model (Free, Basic, Pro, Enterprise)
+- Customization levels based on tier
+- Revenue sharing through fees
+
+### 📊 Leaderboards & Analytics
+
+Track ecosystem performance:
+- Global user rankings
+- Referral counts and earnings
+- Contract statistics
+- Season-specific leaderboards
+- User quest progress
+
+## Technology Stack
+
+- **Blockchain**: Celo (EVM-compatible)
+- **Smart Contracts**: Solidity ^0.8.20
+- **Framework**: OpenZeppelin contracts
+- **SDK**: TypeScript + viem
+- **Token Standard**: ERC-20 (cUSD), ERC-721 (NFT)
+
+## Security Features
+
+- ✅ ReentrancyGuard on all state-changing functions
+- ✅ Ownable access control
+- ✅ Input validation and require statements
+- ✅ Soulbound NFTs prevent reputation trading
+- ✅ Partner authorization system
+- ✅ Emergency withdrawal for owner
