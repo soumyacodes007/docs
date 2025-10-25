@@ -1,0 +1,73 @@
+---
+title: "Quick Start"
+description: "Get started with CeloRefer SDK in minutes"
+---
+
+# Quick Start
+
+Get your CeloRefer integration up and running in minutes.
+
+## Prerequisites
+
+- Node.js >= 16.x
+- A Celo wallet with some cUSD for gas fees
+- A Celo node provider (Alchemy, Infura, or similar)
+
+## Installation
+
+```bash
+npm install @celorefer/sdk viem
+```
+
+## Setup
+
+First, import the SDK and create a wallet client:
+
+```typescript
+import { CeloReferSDK } from '@celorefer/sdk';
+import { createWalletClient, http } from 'viem';
+import { celoAlfajores } from 'viem/chains';
+import { privateKeyToAccount } from 'viem/accounts';
+
+// Create wallet client
+const account = privateKeyToAccount('0x...');
+const walletClient = createWalletClient({
+  account,
+  chain: celoAlfajores,
+  transport: http('YOUR_RPC_URL')
+});
+
+// Initialize the SDK
+const sdk = CeloReferSDK.create(celoAlfajores, walletClient);
+```
+
+## Register a User
+
+```typescript
+// Register a new user with a referral code
+await sdk.registerUser('REFERRAL_CODE');
+
+// Or register as a genesis user (no referrer)
+await sdk.registerUser();
+```
+
+## Check User Information
+
+```typescript
+// Get user information
+const userInfo = await sdk.getUserInfo(userAddress);
+console.log(userInfo);
+```
+
+## Record an Action (For Partners)
+
+```typescript
+// Record a user action (only authorized partners can call this)
+await sdk.recordAction(userAddress, BigInt(100 * 10**18)); // 100 cUSD in wei
+```
+
+## Next Steps
+
+- Learn about [user workflows](/guides/user-workflow)
+- Understand [developer workflows](/guides/developer-workflow)
+- Explore the [API reference](/api-reference/introduction)

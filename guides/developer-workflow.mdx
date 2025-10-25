@@ -1,0 +1,125 @@
+---
+title: "Developer Workflow"
+description: "Learn how developers integrate and work with the CeloRefer SDK"
+---
+
+# Developer Workflow
+
+Understanding how developers integrate and work with the CeloRefer SDK.
+
+## 1. Install and Setup
+
+First, install the SDK and set up the client:
+
+```bash
+npm install @celorefer/sdk viem
+```
+
+```typescript
+import { CeloReferSDK } from '@celorefer/sdk';
+import { createWalletClient, http } from 'viem';
+import { celoAlfajores } from 'viem/chains';
+
+const walletClient = createWalletClient({
+  chain: celoAlfajores,
+  transport: http('YOUR_RPC_URL')
+});
+
+const sdk = CeloReferSDK.create(celoAlfajores, walletClient);
+```
+
+## 2. Get Authorized as a Partner
+
+To record user actions, your dApp needs to be authorized by the platform owner:
+
+```typescript
+// This is typically done by the platform owner
+await sdk.authorizePartner(partnerContractAddress, subscriptionTier);
+```
+
+## 3. Integrate User Registration
+
+Integrate user registration into your onboarding flow:
+
+```typescript
+// Check if user is registered
+const isRegistered = await sdk.isRegistered(userAddress);
+
+if (!isRegistered) {
+  // Register user with referral code from URL params
+  const urlParams = new URLSearchParams(window.location.search);
+  const referralCode = urlParams.get('referral');
+  
+  await sdk.registerUser(referralCode || undefined);
+}
+```
+
+## 4. Record User Actions
+
+Record user actions that should trigger referral rewards:
+
+```typescript
+// Record an action worth 100 cUSD
+const actionValue = BigInt(100 * 10**18); // Convert to wei
+await sdk.recordAction(userAddress, actionValue);
+```
+
+## 5. Display User Information
+
+Show users their referral stats and earnings:
+
+```typescript
+const userInfo = await sdk.getUserInfo(userAddress);
+const rewards = await sdk.getUserRewards(userAddress);
+
+console.log(`Referrals: ${userInfo.referralCount}`);
+console.log(`Tier: ${userInfo.badgeTier}`);
+console.log(`Earned: ${rewards.totalEarned} cUSD`);
+```
+
+## 6. Implement Quests
+
+Allow users to participate in quests:
+
+```typescript
+// Display available quests
+const quests = await sdk.getAvailableQuests();
+
+// Show user progress
+const questProgress = await Promise.all(
+  quests.map(quest => sdk.getQuestProgress(quest.id, userAddress))
+);
+
+// Allow claiming completed quests
+const completedQuests = questProgress.filter(p => p.completed && !p.claimed);
+```
+
+## 7. Seasonal Competition Integration
+
+Integrate seasonal competitions:
+
+```typescript
+// Get current season
+const season = await sdk.getCurrentSeason();
+
+// Display leaderboard
+const leaderboard = await sdk.getSeasonLeaderboard(season.id, 10); // Top 10
+
+// Show user position
+const userPosition = await sdk.getUserSeasonPosition(season.id, userAddress);
+```
+
+## 8. Reputation NFT Integration
+
+Integrate reputation NFTs:
+
+```typescript
+// Check if user has NFT
+const hasNFT = await sdk.hasReputationNFT(userAddress);
+
+if (hasNFT) {
+  // Get NFT metadata
+  const nftMetadata = await sdk.getReputationNFTMetadata(userAddress);
+  console.log(`NFT URI: ${nftMetadata.tokenURI}`);
+}
+```

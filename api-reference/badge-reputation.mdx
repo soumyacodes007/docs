@@ -1,0 +1,118 @@
+---
+title: "Badge & Reputation"
+description: "API reference for badge tiers and reputation system"
+---
+
+# Badge & Reputation
+
+Methods for working with badge tiers and the reputation system.
+
+## getBadgeTier
+
+Gets the badge tier for a user based on their referral count.
+
+```typescript
+async getBadgeTier(referralCount: number): Promise<BadgeTier>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| referralCount | `number` | Number of referrals |
+
+### Returns
+
+[BadgeTier](/api-reference/typescript-types#badgetier) - The badge tier.
+
+### Example
+
+```typescript
+const tier = await sdk.getBadgeTier(15);
+console.log(tier); // 'Gold'
+```
+
+## getBadgeRequirements
+
+Gets the requirements for each badge tier.
+
+```typescript
+async getBadgeRequirements(): Promise<BadgeRequirements>
+```
+
+### Returns
+
+[BadgeRequirements](/api-reference/typescript-types#badgerequirements) object containing requirements for each tier.
+
+### Example
+
+```typescript
+const requirements = await sdk.getBadgeRequirements();
+console.log(`Gold tier requires: ${requirements.Gold.minReferrals} referrals`);
+```
+
+## getUserBadgeProgress
+
+Gets a user's progress toward the next badge tier.
+
+```typescript
+async getUserBadgeProgress(userAddress: Address): Promise<BadgeProgress>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+[BadgeProgress](/api-reference/typescript-types#badgeprogress) object containing progress information.
+
+### Example
+
+```typescript
+const progress = await sdk.getUserBadgeProgress('0x1234...');
+console.log(`Current tier: ${progress.currentTier}`);
+console.log(`Next tier: ${progress.nextTier}`);
+console.log(`Referrals needed: ${progress.referralsNeeded}`);
+```
+
+## getAllBadgeTiers
+
+Gets all available badge tiers.
+
+```typescript
+async getAllBadgeTiers(): Promise<BadgeTier[]>
+```
+
+### Returns
+
+Array of [BadgeTier](/api-reference/typescript-types#badgetier) values.
+
+### Example
+
+```typescript
+const tiers = await sdk.getAllBadgeTiers();
+console.log(tiers); // ['Bronze', 'Silver', 'Gold', 'Platinum']
+```
+
+## getPlatformStats
+
+Gets platform-wide statistics about badge distribution.
+
+```typescript
+async getPlatformStats(): Promise<PlatformStats>
+```
+
+### Returns
+
+[PlatformStats](/api-reference/typescript-types#platformstats) object containing platform statistics.
+
+### Example
+
+```typescript
+const stats = await sdk.getPlatformStats();
+console.log(`Bronze users: ${stats.badgeDistribution.Bronze}`);
+console.log(`Silver users: ${stats.badgeDistribution.Silver}`);
+```

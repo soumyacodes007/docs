@@ -1,0 +1,117 @@
+---
+title: "Platform Owner Workflow"
+description: "Learn how platform owners manage the CeloRefer system"
+---
+
+# Platform Owner Workflow
+
+Understanding how platform owners manage the CeloRefer system.
+
+## 1. Deploy Contracts
+
+Platform owners deploy the CeloRefer contracts:
+
+```typescript
+// Deployment is typically done using Hardhat or Foundry
+// Refer to the contract documentation for deployment scripts
+```
+
+## 2. Set Platform Fee
+
+Configure the platform fee percentage:
+
+```typescript
+// Set platform fee to 15%
+await sdk.setPlatformFeePercentage(1500); // 1500 basis points = 15%
+```
+
+## 3. Authorize Partners
+
+Authorize partner dApps:
+
+```typescript
+// Authorize a partner with Pro tier
+await sdk.authorizePartner(partnerAddress, 2); // 2 = Pro tier
+
+// Deauthorize a partner
+await sdk.deauthorizePartner(partnerAddress);
+```
+
+## 4. Create Quests
+
+Create quests for users:
+
+```typescript
+// Create a new quest
+const questParams = {
+  name: "First 5 Referrals",
+  description: "Refer 5 users to earn a reward",
+  targetReferralCount: 5,
+  rewardAmount: BigInt(50 * 10**18), // 50 cUSD
+  startTime: Math.floor(Date.now() / 1000),
+  endTime: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60 // 30 days
+};
+
+await sdk.createQuest(questParams);
+```
+
+## 5. Manage Seasons
+
+Create and manage seasonal competitions:
+
+```typescript
+// Create a new season
+const seasonParams = {
+  name: "Summer Challenge",
+  description: "Summer referral competition",
+  startTime: Math.floor(Date.now() / 1000),
+  endTime: Math.floor(Date.now() / 1000) + 60 * 24 * 60 * 60, // 60 days
+  prizePool: BigInt(1000 * 10**18) // 1000 cUSD
+};
+
+await sdk.createSeason(seasonParams);
+```
+
+## 6. Collect Platform Fees
+
+Withdraw collected platform fees:
+
+```typescript
+// Check available fees
+const availableFees = await sdk.getPlatformFees();
+
+// Withdraw fees to treasury
+await sdk.withdrawPlatformFees(treasuryAddress, availableFees);
+```
+
+## 7. Monitor System
+
+Monitor the system performance:
+
+```typescript
+// Get system statistics
+const stats = await sdk.getSystemStats();
+console.log(`Total users: ${stats.totalUsers}`);
+console.log(`Total referrals: ${stats.totalReferrals}`);
+console.log(`Total rewards distributed: ${stats.totalRewardsDistributed}`);
+
+// Get partner information
+const partnerInfo = await sdk.getPartnerInfo(partnerAddress);
+console.log(`Partner tier: ${partnerInfo.tier}`);
+console.log(`Partner status: ${partnerInfo.authorized ? 'Authorized' : 'Not authorized'}`);
+```
+
+## 8. Emergency Functions
+
+In case of emergencies, platform owners have special functions:
+
+```typescript
+// Emergency pause (only owner)
+await sdk.pause();
+
+// Emergency unpause (only owner)
+await sdk.unpause();
+
+// Emergency withdraw (only owner)
+await sdk.emergencyWithdraw(tokenAddress, recipientAddress, amount);
+```

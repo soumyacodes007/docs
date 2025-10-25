@@ -1,0 +1,156 @@
+---
+title: "Referral Operations"
+description: "API reference for referral tracking and reward distribution"
+---
+
+# Referral Operations
+
+Methods for tracking referrals and distributing rewards.
+
+## recordAction
+
+Records a user action that triggers referral rewards (partner-only method).
+
+```typescript
+async recordAction(userAddress: Address, actionValue: bigint): Promise<void>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user performing the action |
+| actionValue | `bigint` | Value of the action in wei (e.g., 100 * 10^18 for 100 cUSD) |
+
+### Example
+
+```typescript
+// Record an action worth 100 cUSD
+await sdk.recordAction('0x1234...', BigInt(100 * 10**18));
+```
+
+### Requirements
+
+- Only authorized partners can call this method
+- The caller must be registered as a partner with a valid subscription tier
+
+## getUserRewards
+
+Gets the reward information for a user.
+
+```typescript
+async getUserRewards(userAddress: Address): Promise<UserRewards>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+[UserRewards](/api-reference/typescript-types#userrewards) object containing reward details.
+
+### Example
+
+```typescript
+const rewards = await sdk.getUserRewards('0x1234...');
+console.log(`Total earned: ${rewards.totalEarned} cUSD`);
+console.log(`Available: ${rewards.available} cUSD`);
+```
+
+## claimRewards
+
+Claims available rewards for a user.
+
+```typescript
+async claimRewards(): Promise<void>
+```
+
+### Example
+
+```typescript
+await sdk.claimRewards();
+```
+
+### Events
+
+Emits a `RewardsClaimed` event on the blockchain.
+
+## getReferralTree
+
+Gets the referral tree for a user (direct referrals and their referrals).
+
+```typescript
+async getReferralTree(userAddress: Address): Promise<ReferralTree>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+[ReferralTree](/api-reference/typescript-types#referraltree) object containing the referral structure.
+
+### Example
+
+```typescript
+const tree = await sdk.getReferralTree('0x1234...');
+console.log(`Direct referrals: ${tree.directReferrals.length}`);
+console.log(`Second-level referrals: ${tree.secondLevelReferrals.length}`);
+```
+
+## getBadgeTier
+
+Gets the badge tier for a user based on their referral count.
+
+```typescript
+async getBadgeTier(referralCount: number): Promise<BadgeTier>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| referralCount | `number` | Number of referrals |
+
+### Returns
+
+[BadgeTier](/api-reference/typescript-types#badgetier) - The badge tier.
+
+### Example
+
+```typescript
+const tier = await sdk.getBadgeTier(15);
+console.log(tier); // 'Gold'
+```
+
+## getRewardRates
+
+Gets the reward rates for a badge tier.
+
+```typescript
+async getRewardRates(badgeTier: BadgeTier): Promise<RewardRates>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| badgeTier | [BadgeTier](/api-reference/typescript-types#badgetier) | Badge tier |
+
+### Returns
+
+[RewardRates](/api-reference/typescript-types#rewardrates) object containing reward percentages.
+
+### Example
+
+```typescript
+const rates = await sdk.getRewardRates('Gold');
+console.log(`Level 1 rate: ${rates.level1}%`);
+console.log(`Level 2 rate: ${rates.level2}%`);
+```

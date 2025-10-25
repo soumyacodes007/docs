@@ -1,0 +1,141 @@
+---
+title: "Quest System"
+description: "API reference for quest creation and management"
+---
+
+# Quest System
+
+Methods for working with the quest system.
+
+## createQuest
+
+Creates a new quest (platform owner only).
+
+```typescript
+async createQuest(params: CreateQuestParams): Promise<void>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| params | [CreateQuestParams](/api-reference/typescript-types#createquestparams) | Quest creation parameters |
+
+### Example
+
+```typescript
+const questParams = {
+  name: "First 5 Referrals",
+  description: "Refer 5 users to earn a reward",
+  targetReferralCount: 5,
+  rewardAmount: BigInt(50 * 10**18), // 50 cUSD
+  startTime: Math.floor(Date.now() / 1000),
+  endTime: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60 // 30 days
+};
+
+await sdk.createQuest(questParams);
+```
+
+### Requirements
+
+- Only platform owner can call this method
+
+### Events
+
+Emits a `QuestCreated` event on the blockchain.
+
+## getAvailableQuests
+
+Gets all available quests.
+
+```typescript
+async getAvailableQuests(): Promise<Quest[]>
+```
+
+### Returns
+
+Array of [Quest](/api-reference/typescript-types#quest) objects.
+
+### Example
+
+```typescript
+const quests = await sdk.getAvailableQuests();
+quests.forEach(quest => {
+  console.log(`${quest.name}: ${quest.description}`);
+});
+```
+
+## getQuestProgress
+
+Gets a user's progress on a specific quest.
+
+```typescript
+async getQuestProgress(questId: bigint, userAddress: Address): Promise<QuestProgress>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| questId | `bigint` | ID of the quest |
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+[QuestProgress](/api-reference/typescript-types#questprogress) object containing progress information.
+
+### Example
+
+```typescript
+const progress = await sdk.getQuestProgress(1n, '0x1234...');
+console.log(`Completed: ${progress.completed}`);
+console.log(`Claimed: ${progress.claimed}`);
+```
+
+## claimQuestReward
+
+Claims the reward for a completed quest.
+
+```typescript
+async claimQuestReward(questId: bigint): Promise<void>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| questId | `bigint` | ID of the quest |
+
+### Example
+
+```typescript
+await sdk.claimQuestReward(1n);
+```
+
+### Requirements
+
+- Quest must be completed
+- Reward must not have been claimed yet
+
+### Events
+
+Emits a `QuestRewardClaimed` event on the blockchain.
+
+## getAllQuests
+
+Gets all quests (including completed/ended ones).
+
+```typescript
+async getAllQuests(): Promise<Quest[]>
+```
+
+### Returns
+
+Array of [Quest](/api-reference/typescript-types#quest) objects.
+
+### Example
+
+```typescript
+const allQuests = await sdk.getAllQuests();
+console.log(`Total quests: ${allQuests.length}`);
+```

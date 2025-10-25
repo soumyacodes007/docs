@@ -1,0 +1,104 @@
+---
+title: "User Workflow"
+description: "Learn how users interact with the CeloRefer system"
+---
+
+# User Workflow
+
+Understanding the user journey in the CeloRefer system.
+
+## 1. Registration
+
+Users can join the CeloRefer system in two ways:
+
+### With a Referral Code
+```typescript
+// Register with a referral code
+await sdk.registerUser('REFERRAL_CODE');
+```
+
+### As a Genesis User
+```typescript
+// Register without a referral code (genesis user)
+await sdk.registerUser();
+```
+
+## 2. Get Referral Code
+
+After registration, users receive a unique referral code:
+
+```typescript
+const userInfo = await sdk.getUserInfo(userAddress);
+console.log(`Your referral code: ${userInfo.referralCode}`);
+```
+
+## 3. Share Referral Link
+
+Users can share their referral code with others:
+```
+https://your-dapp.com/referral?code=USER_REFERRAL_CODE
+```
+
+## 4. Earn Rewards
+
+Users earn rewards when their referrals perform actions:
+
+```typescript
+// Check earned rewards
+const rewards = await sdk.getUserRewards(userAddress);
+console.log(`Total earned: ${rewards.totalEarned} cUSD`);
+console.log(`Available: ${rewards.available} cUSD`);
+```
+
+## 5. Level Up
+
+Users level up based on their referral count:
+
+```typescript
+const userInfo = await sdk.getUserInfo(userAddress);
+console.log(`Badge tier: ${userInfo.badgeTier}`);
+console.log(`Referral count: ${userInfo.referralCount}`);
+```
+
+## 6. Participate in Quests
+
+Users can participate in quests:
+
+```typescript
+// Get available quests
+const quests = await sdk.getAvailableQuests();
+
+// Check progress on a quest
+const progress = await sdk.getQuestProgress(questId, userAddress);
+
+// Claim reward when quest is completed
+if (progress.completed) {
+  await sdk.claimQuestReward(questId);
+}
+```
+
+## 7. Compete in Seasons
+
+Users can compete in seasonal competitions:
+
+```typescript
+// Get current season info
+const season = await sdk.getCurrentSeason();
+
+// Check leaderboard position
+const position = await sdk.getUserSeasonPosition(season.id, userAddress);
+```
+
+## 8. Mint Reputation NFT
+
+Users can mint their reputation NFT:
+
+```typescript
+// Check if user has an NFT
+const hasNFT = await sdk.hasReputationNFT(userAddress);
+
+// Mint NFT if they don't have one
+if (!hasNFT) {
+  await sdk.mintReputationNFT();
+}
+```

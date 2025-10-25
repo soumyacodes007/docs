@@ -1,0 +1,151 @@
+---
+title: "Seasonal Competitions"
+description: "API reference for seasonal competitions and leaderboards"
+---
+
+# Seasonal Competitions
+
+Methods for working with seasonal competitions.
+
+## createSeason
+
+Creates a new season (platform owner only).
+
+```typescript
+async createSeason(params: CreateSeasonParams): Promise<void>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| params | [CreateSeasonParams](/api-reference/typescript-types#createseasonparams) | Season creation parameters |
+
+### Example
+
+```typescript
+const seasonParams = {
+  name: "Summer Challenge",
+  description: "Summer referral competition",
+  startTime: Math.floor(Date.now() / 1000),
+  endTime: Math.floor(Date.now() / 1000) + 60 * 24 * 60 * 60, // 60 days
+  prizePool: BigInt(1000 * 10**18) // 1000 cUSD
+};
+
+await sdk.createSeason(seasonParams);
+```
+
+### Requirements
+
+- Only platform owner can call this method
+
+### Events
+
+Emits a `SeasonCreated` event on the blockchain.
+
+## getCurrentSeason
+
+Gets the current active season.
+
+```typescript
+async getCurrentSeason(): Promise<Season | null>
+```
+
+### Returns
+
+[Season](/api-reference/typescript-types#season) object or null if no active season.
+
+### Example
+
+```typescript
+const season = await sdk.getCurrentSeason();
+if (season) {
+  console.log(`Current season: ${season.name}`);
+} else {
+  console.log('No active season');
+}
+```
+
+## getSeasonLeaderboard
+
+Gets the leaderboard for a season.
+
+```typescript
+async getSeasonLeaderboard(seasonId: bigint, limit?: number): Promise<LeaderboardEntry[]>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| seasonId | `bigint` | ID of the season |
+| limit | `number` (optional) | Maximum number of entries to return (default: 100) |
+
+### Returns
+
+Array of [LeaderboardEntry](/api-reference/typescript-types#leaderboardentry) objects.
+
+### Example
+
+```typescript
+const leaderboard = await sdk.getSeasonLeaderboard(1n, 10); // Top 10
+leaderboard.forEach((entry, index) => {
+  console.log(`${index + 1}. ${entry.user}: ${entry.score} referrals`);
+});
+```
+
+## getUserSeasonPosition
+
+Gets a user's position in a season leaderboard.
+
+```typescript
+async getUserSeasonPosition(seasonId: bigint, userAddress: Address): Promise<number | null>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| seasonId | `bigint` | ID of the season |
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+`number | null` - User's position (1-indexed) or null if not in leaderboard.
+
+### Example
+
+```typescript
+const position = await sdk.getUserSeasonPosition(1n, '0x1234...');
+if (position) {
+  console.log(`Your position: #${position}`);
+} else {
+  console.log('Not in leaderboard');
+}
+```
+
+## getSeasonStats
+
+Gets statistics for a season.
+
+```typescript
+async getSeasonStats(seasonId: bigint): Promise<SeasonStats>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| seasonId | `bigint` | ID of the season |
+
+### Returns
+
+[SeasonStats](/api-reference/typescript-types#seasonstats) object containing season statistics.
+
+### Example
+
+```typescript
+const stats = await sdk.getSeasonStats(1n);
+console.log(`Total participants: ${stats.totalParticipants}`);
+console.log(`Total referrals: ${stats.totalReferrals}`);
+```

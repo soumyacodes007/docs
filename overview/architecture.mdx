@@ -1,0 +1,41 @@
+---
+title: "System Architecture"
+description: "Understand the architecture of CeloRefer system"
+---
+
+# System Architecture
+
+## Smart Contract Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     CeloReferEnhanced                       │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  • User Registration & Referral Tree                  │  │
+│  │  • Dynamic Reward Distribution (tiered)               │  │
+│  │  • Quest System                                       │  │
+│  │  • Seasonal Competitions                              │  │
+│  │  │  • Badge Tier Management                            │  │
+│  │  • Platform Fee Collection                            │  │
+│  │  • Partner Authorization                              │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                            │
+            ┌───────────────┴───────────────┐
+            │                               │
+┌───────────▼─────────────┐     ┌──────────▼───────────┐
+│   ReputationNFT.sol     │     │   Partner dApps      │
+│  • Soulbound NFT        │     │  (e.g., DemoDApp)    │
+│  • User Reputation      │     │  • Stake/Action      │
+│  • Dynamic Metadata     │     │  • Call recordAction │
+│  • Non-transferable     │     │  • Reward Users      │
+└─────────────────────────┘     └──────────────────────┘
+```
+
+## Technology Stack
+
+- **Blockchain**: Celo (EVM-compatible)
+- **Smart Contracts**: Solidity ^0.8.20
+- **Framework**: OpenZeppelin contracts
+- **SDK**: TypeScript + viem
+- **Token Standard**: ERC-20 (cUSD), ERC-721 (NFT)

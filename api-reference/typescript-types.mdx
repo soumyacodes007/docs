@@ -1,0 +1,251 @@
+---
+title: "TypeScript Types"
+description: "Complete reference for TypeScript types used in the CeloRefer SDK"
+---
+
+# TypeScript Types
+
+Complete reference for all TypeScript types used in the CeloRefer SDK.
+
+## User Types
+
+### UserInfo
+
+```typescript
+interface UserInfo {
+  referralCode: string;
+  referralCount: number;
+  badgeTier: BadgeTier;
+  registeredAt: number; // Unix timestamp
+  referrer: Address | null;
+}
+```
+
+### UserRewards
+
+```typescript
+interface UserRewards {
+  totalEarned: bigint; // In wei
+  available: bigint;   // In wei
+  claimed: bigint;     // In wei
+}
+```
+
+### ReferralTree
+
+```typescript
+interface ReferralTree {
+  directReferrals: Address[];
+  secondLevelReferrals: Address[];
+}
+```
+
+## Badge Types
+
+### BadgeTier
+
+```typescript
+type BadgeTier = 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
+```
+
+### RewardRates
+
+```typescript
+interface RewardRates {
+  level1: number; // Percentage for direct referrer
+  level2: number; // Percentage for parent referrer
+}
+```
+
+### BadgeRequirements
+
+```typescript
+interface BadgeRequirements {
+  Bronze: { minReferrals: number; maxReferrals: number };
+  Silver: { minReferrals: number; maxReferrals: number };
+  Gold: { minReferrals: number; maxReferrals: number };
+  Platinum: { minReferrals: number; maxReferrals: number };
+}
+```
+
+### BadgeProgress
+
+```typescript
+interface BadgeProgress {
+  currentTier: BadgeTier;
+  nextTier: BadgeTier | null;
+  referralsNeeded: number;
+}
+```
+
+### PlatformStats
+
+```typescript
+interface PlatformStats {
+  badgeDistribution: Record<BadgeTier, number>;
+  totalUsers: number;
+  totalReferrals: number;
+}
+```
+
+## NFT Types
+
+### NFTMetadata
+
+```typescript
+interface NFTMetadata {
+  name: string;
+  description: string;
+  image: string;
+  badgeTier: BadgeTier;
+  referralCount: number;
+  tokenURI: string;
+}
+```
+
+## Quest Types
+
+### Quest
+
+```typescript
+interface Quest {
+  id: bigint;
+  name: string;
+  description: string;
+  targetReferralCount: number;
+  rewardAmount: bigint; // In wei
+  startTime: number; // Unix timestamp
+  endTime: number; // Unix timestamp
+  isActive: boolean;
+}
+```
+
+### QuestProgress
+
+```typescript
+interface QuestProgress {
+  questId: bigint;
+  user: Address;
+  referrals: number;
+  completed: boolean;
+  claimed: boolean;
+}
+```
+
+### CreateQuestParams
+
+```typescript
+interface CreateQuestParams {
+  name: string;
+  description: string;
+  targetReferralCount: number;
+  rewardAmount: bigint; // In wei
+  startTime: number; // Unix timestamp
+  endTime: number; // Unix timestamp
+}
+```
+
+## Season Types
+
+### Season
+
+```typescript
+interface Season {
+  id: bigint;
+  name: string;
+  description: string;
+  startTime: number; // Unix timestamp
+  endTime: number; // Unix timestamp
+  prizePool: bigint; // In wei
+  isActive: boolean;
+}
+```
+
+### LeaderboardEntry
+
+```typescript
+interface LeaderboardEntry {
+  user: Address;
+  score: number; // Referral count
+  position: number;
+}
+```
+
+### SeasonStats
+
+```typescript
+interface SeasonStats {
+  totalParticipants: number;
+  totalReferrals: number;
+  prizePool: bigint; // In wei
+}
+```
+
+### CreateSeasonParams
+
+```typescript
+interface CreateSeasonParams {
+  name: string;
+  description: string;
+  startTime: number; // Unix timestamp
+  endTime: number; // Unix timestamp
+  prizePool: bigint; // In wei
+}
+```
+
+## Partner Types
+
+### PartnerInfo
+
+```typescript
+interface PartnerInfo {
+  authorized: boolean;
+  tier: number; // 0=Free, 1=Basic, 2=Pro, 3=Enterprise
+  authorizedAt: number; // Unix timestamp
+}
+```
+
+## Leaderboard Types
+
+### LeaderboardStats
+
+```typescript
+interface LeaderboardStats {
+  totalUsers: number;
+  usersInLeaderboard: number;
+  lastUpdated: number; // Unix timestamp
+}
+```
+
+## Utility Types
+
+### ContractAddresses
+
+```typescript
+interface ContractAddresses {
+  celoRefer: Address;
+  reputationNFT: Address;
+  demoDApp: Address;
+}
+```
+
+### ChainInfo
+
+```typescript
+interface ChainInfo {
+  id: number;
+  name: string;
+  nativeCurrency: {
+    name: string;
+    symbol: string;
+    decimals: number;
+  };
+  rpcUrls: string[];
+}
+```
+
+## Address Type
+
+```typescript
+type Address = \`0x\${string}\`;
+```

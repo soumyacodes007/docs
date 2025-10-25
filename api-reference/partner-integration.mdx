@@ -1,0 +1,166 @@
+---
+title: "Partner Integration"
+description: "API reference for partner authorization and management"
+---
+
+# Partner Integration
+
+Methods for partner authorization and management.
+
+## authorizePartner
+
+Authorizes a partner contract (platform owner only).
+
+```typescript
+async authorizePartner(partnerAddress: Address, tier: number): Promise<void>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| partnerAddress | `Address` | Address of the partner contract |
+| tier | `number` | Subscription tier (0=Free, 1=Basic, 2=Pro, 3=Enterprise) |
+
+### Example
+
+```typescript
+// Authorize partner with Pro tier (2)
+await sdk.authorizePartner('0x5678...', 2);
+```
+
+### Requirements
+
+- Only platform owner can call this method
+
+### Events
+
+Emits a `PartnerAuthorized` event on the blockchain.
+
+## deauthorizePartner
+
+Deauthorizes a partner contract (platform owner only).
+
+```typescript
+async deauthorizePartner(partnerAddress: Address): Promise<void>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| partnerAddress | `Address` | Address of the partner contract |
+
+### Example
+
+```typescript
+await sdk.deauthorizePartner('0x5678...');
+```
+
+### Requirements
+
+- Only platform owner can call this method
+
+### Events
+
+Emits a `PartnerDeauthorized` event on the blockchain.
+
+## getPartnerInfo
+
+Gets information about a partner.
+
+```typescript
+async getPartnerInfo(partnerAddress: Address): Promise<PartnerInfo>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| partnerAddress | `Address` | Address of the partner contract |
+
+### Returns
+
+[PartnerInfo](/api-reference/typescript-types#partnerinfo) object containing partner details.
+
+### Example
+
+```typescript
+const partnerInfo = await sdk.getPartnerInfo('0x5678...');
+console.log(`Authorized: ${partnerInfo.authorized}`);
+console.log(`Tier: ${partnerInfo.tier}`);
+```
+
+## isAuthorizedPartner
+
+Checks if an address is an authorized partner.
+
+```typescript
+async isAuthorizedPartner(partnerAddress: Address): Promise<boolean>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| partnerAddress | `Address` | Address to check |
+
+### Returns
+
+`boolean` - True if authorized, false otherwise.
+
+### Example
+
+```typescript
+const isPartner = await sdk.isAuthorizedPartner('0x5678...');
+console.log(`Is partner: ${isPartner}`);
+```
+
+## getPlatformFeePercentage
+
+Gets the current platform fee percentage.
+
+```typescript
+async getPlatformFeePercentage(): Promise<number>
+```
+
+### Returns
+
+`number` - Platform fee percentage in basis points (e.g., 1500 = 15%).
+
+### Example
+
+```typescript
+const feePercent = await sdk.getPlatformFeePercentage();
+console.log(`Platform fee: ${feePercent / 100}%`);
+```
+
+## setPlatformFeePercentage
+
+Sets the platform fee percentage (platform owner only).
+
+```typescript
+async setPlatformFeePercentage(percentage: number): Promise<void>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| percentage | `number` | Fee percentage in basis points (e.g., 1500 = 15%) |
+
+### Example
+
+```typescript
+// Set platform fee to 15%
+await sdk.setPlatformFeePercentage(1500);
+```
+
+### Requirements
+
+- Only platform owner can call this method
+- Percentage must be between 0 and 5000 (0-50%)
+
+### Events
+
+Emits a `PlatformFeeUpdated` event on the blockchain.

@@ -1,0 +1,142 @@
+---
+title: "User Management"
+description: "API reference for user registration and management"
+---
+
+# User Management
+
+Methods for registering users and retrieving user information.
+
+## registerUser
+
+Registers a new user in the CeloRefer system.
+
+```typescript
+async registerUser(referralCode?: string): Promise<void>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| referralCode | `string` (optional) | Referral code of the referring user |
+
+### Example
+
+```typescript
+// Register with a referral code
+await sdk.registerUser('ABC123');
+
+// Register as a genesis user
+await sdk.registerUser();
+```
+
+### Events
+
+Emits a `UserRegistered` event on the blockchain.
+
+## isRegistered
+
+Checks if a user is registered in the system.
+
+```typescript
+async isRegistered(userAddress: Address): Promise<boolean>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user to check |
+
+### Returns
+
+`boolean` - True if the user is registered, false otherwise.
+
+### Example
+
+```typescript
+const registered = await sdk.isRegistered('0x1234...');
+console.log(registered); // true or false
+```
+
+## getUserInfo
+
+Retrieves detailed information about a user.
+
+```typescript
+async getUserInfo(userAddress: Address): Promise<UserInfo>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+[UserInfo](/api-reference/typescript-types#userinfo) object containing user details.
+
+### Example
+
+```typescript
+const userInfo = await sdk.getUserInfo('0x1234...');
+console.log(userInfo.referralCode);
+console.log(userInfo.referralCount);
+console.log(userInfo.badgeTier);
+```
+
+## getUserReferrer
+
+Gets the referrer of a user.
+
+```typescript
+async getUserReferrer(userAddress: Address): Promise<Address | null>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+`Address | null` - Address of the referrer, or null if the user is a genesis user.
+
+### Example
+
+```typescript
+const referrer = await sdk.getUserReferrer('0x1234...');
+if (referrer) {
+  console.log(`Referrer: ${referrer}`);
+} else {
+  console.log('Genesis user (no referrer)');
+}
+```
+
+## generateReferralCode
+
+Generates a unique referral code for a user.
+
+```typescript
+async generateReferralCode(userAddress: Address): Promise<string>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+`string` - Unique referral code for the user.
+
+### Example
+
+```typescript
+const code = await sdk.generateReferralCode('0x1234...');
+console.log(`Your referral code: ${code}`);
+```

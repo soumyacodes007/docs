@@ -1,0 +1,125 @@
+---
+title: "NFT Operations"
+description: "API reference for reputation NFT minting and management"
+---
+
+# NFT Operations
+
+Methods for working with reputation NFTs.
+
+## hasReputationNFT
+
+Checks if a user has minted their reputation NFT.
+
+```typescript
+async hasReputationNFT(userAddress: Address): Promise<boolean>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+`boolean` - True if the user has an NFT, false otherwise.
+
+### Example
+
+```typescript
+const hasNFT = await sdk.hasReputationNFT('0x1234...');
+console.log(hasNFT); // true or false
+```
+
+## mintReputationNFT
+
+Mints a reputation NFT for a user.
+
+```typescript
+async mintReputationNFT(): Promise<void>
+```
+
+### Example
+
+```typescript
+await sdk.mintReputationNFT();
+```
+
+### Requirements
+
+- User must be registered
+- User must not already have an NFT
+
+### Events
+
+Emits a `NFTMinted` event on the blockchain.
+
+## getReputationNFTMetadata
+
+Gets the metadata for a user's reputation NFT.
+
+```typescript
+async getReputationNFTMetadata(userAddress: Address): Promise<NFTMetadata>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+[NFTMetadata](/api-reference/typescript-types#nftmetadata) object containing NFT details.
+
+### Example
+
+```typescript
+const metadata = await sdk.getReputationNFTMetadata('0x1234...');
+console.log(`Token URI: ${metadata.tokenURI}`);
+console.log(`Badge tier: ${metadata.badgeTier}`);
+```
+
+## getReputationNFTTokenId
+
+Gets the token ID for a user's reputation NFT.
+
+```typescript
+async getReputationNFTTokenId(userAddress: Address): Promise<bigint>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+`bigint` - Token ID of the user's NFT.
+
+### Example
+
+```typescript
+const tokenId = await sdk.getReputationNFTTokenId('0x1234...');
+console.log(`Token ID: ${tokenId}`);
+```
+
+## refreshReputationNFT
+
+Refreshes the metadata for a user's reputation NFT to reflect current stats.
+
+```typescript
+async refreshReputationNFT(): Promise<void>
+```
+
+### Example
+
+```typescript
+await sdk.refreshReputationNFT();
+```
+
+### Events
+
+Emits a `NFTRefreshed` event on the blockchain.

@@ -1,0 +1,126 @@
+---
+title: "Utility Functions"
+description: "API reference for utility functions"
+---
+
+# Utility Functions
+
+Helper functions for common operations.
+
+## formatCUSD
+
+Formats a cUSD amount for display.
+
+```typescript
+formatCUSD(amount: bigint, decimals?: number): string
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| amount | `bigint` | Amount in wei |
+| decimals | `number` (optional) | Number of decimal places (default: 2) |
+
+### Returns
+
+`string` - Formatted cUSD amount.
+
+### Example
+
+```typescript
+const amount = BigInt(123456789000000000000n); // 123.456789 cUSD
+console.log(sdk.formatCUSD(amount)); // "123.46"
+console.log(sdk.formatCUSD(amount, 4)); // "123.4568"
+```
+
+## parseCUSD
+
+Parses a cUSD string to bigint.
+
+```typescript
+parseCUSD(amount: string): bigint
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| amount | `string` | cUSD amount as string |
+
+### Returns
+
+`bigint` - Amount in wei.
+
+### Example
+
+```typescript
+const amount = sdk.parseCUSD("123.45");
+console.log(amount); // 123450000000000000000n
+```
+
+## generateReferralLink
+
+Generates a referral link for a user.
+
+```typescript
+generateReferralLink(baseUrl: string, referralCode: string): string
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| baseUrl | `string` | Base URL for the referral link |
+| referralCode | `string` | User's referral code |
+
+### Returns
+
+`string` - Complete referral link.
+
+### Example
+
+```typescript
+const link = sdk.generateReferralLink("https://mydapp.com", "ABC123");
+console.log(link); // "https://mydapp.com?referral=ABC123"
+```
+
+## getContractAddresses
+
+Gets the addresses of deployed contracts.
+
+```typescript
+getContractAddresses(): ContractAddresses
+```
+
+### Returns
+
+[ContractAddresses](/api-reference/typescript-types#contractaddresses) object containing contract addresses.
+
+### Example
+
+```typescript
+const addresses = sdk.getContractAddresses();
+console.log(`CeloRefer contract: ${addresses.celoRefer}`);
+console.log(`Reputation NFT contract: ${addresses.reputationNFT}`);
+```
+
+## getChainInfo
+
+Gets information about the connected chain.
+
+```typescript
+getChainInfo(): ChainInfo
+```
+
+### Returns
+
+[ChainInfo](/api-reference/typescript-types#chaininfo) object containing chain information.
+
+### Example
+
+```typescript
+const chainInfo = sdk.getChainInfo();
+console.log(`Chain: ${chainInfo.name}`);
+console.log(`Chain ID: ${chainInfo.id}`);
+```

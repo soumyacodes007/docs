@@ -1,0 +1,142 @@
+---
+title: "Leaderboard"
+description: "API reference for global and seasonal leaderboards"
+---
+
+# Leaderboard
+
+Methods for retrieving leaderboard information.
+
+## getGlobalLeaderboard
+
+Gets the global leaderboard.
+
+```typescript
+async getGlobalLeaderboard(limit?: number): Promise<LeaderboardEntry[]>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| limit | `number` (optional) | Maximum number of entries to return (default: 100) |
+
+### Returns
+
+Array of [LeaderboardEntry](/api-reference/typescript-types#leaderboardentry) objects.
+
+### Example
+
+```typescript
+const leaderboard = await sdk.getGlobalLeaderboard(10); // Top 10
+leaderboard.forEach((entry, index) => {
+  console.log(`${index + 1}. ${entry.user}: ${entry.score} referrals`);
+});
+```
+
+## getUserGlobalPosition
+
+Gets a user's position in the global leaderboard.
+
+```typescript
+async getUserGlobalPosition(userAddress: Address): Promise<number | null>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+`number | null` - User's position (1-indexed) or null if not in leaderboard.
+
+### Example
+
+```typescript
+const position = await sdk.getUserGlobalPosition('0x1234...');
+if (position) {
+  console.log(`Your global position: #${position}`);
+} else {
+  console.log('Not in global leaderboard');
+}
+```
+
+## getSeasonLeaderboard
+
+Gets the leaderboard for a specific season.
+
+```typescript
+async getSeasonLeaderboard(seasonId: bigint, limit?: number): Promise<LeaderboardEntry[]>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| seasonId | `bigint` | ID of the season |
+| limit | `number` (optional) | Maximum number of entries to return (default: 100) |
+
+### Returns
+
+Array of [LeaderboardEntry](/api-reference/typescript-types#leaderboardentry) objects.
+
+### Example
+
+```typescript
+const leaderboard = await sdk.getSeasonLeaderboard(1n, 10); // Top 10
+leaderboard.forEach((entry, index) => {
+  console.log(`${index + 1}. ${entry.user}: ${entry.score} referrals`);
+});
+```
+
+## getUserSeasonPosition
+
+Gets a user's position in a season leaderboard.
+
+```typescript
+async getUserSeasonPosition(seasonId: bigint, userAddress: Address): Promise<number | null>
+```
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| seasonId | `bigint` | ID of the season |
+| userAddress | `Address` | Address of the user |
+
+### Returns
+
+`number | null` - User's position (1-indexed) or null if not in leaderboard.
+
+### Example
+
+```typescript
+const position = await sdk.getUserSeasonPosition(1n, '0x1234...');
+if (position) {
+  console.log(`Your season position: #${position}`);
+} else {
+  console.log('Not in season leaderboard');
+}
+```
+
+## getLeaderboardStats
+
+Gets statistics about the leaderboard system.
+
+```typescript
+async getLeaderboardStats(): Promise<LeaderboardStats>
+```
+
+### Returns
+
+[LeaderboardStats](/api-reference/typescript-types#leaderboardstats) object containing leaderboard statistics.
+
+### Example
+
+```typescript
+const stats = await sdk.getLeaderboardStats();
+console.log(`Total users: ${stats.totalUsers}`);
+console.log(`Users in leaderboard: ${stats.usersInLeaderboard}`);
+```
