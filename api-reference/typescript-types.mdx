@@ -1,191 +1,41 @@
 ---
-title: "TypeScript Types"
-description: "Complete reference for TypeScript types used in the CeloRefer SDK"
+title: "Types and Configuration"
+description: "Configuration notes for developers using the PIXA MCP package."
 ---
 
-# TypeScript Types
+# Types and Configuration
 
-Complete reference for all TypeScript types used in the CeloRefer SDK.
+PIXA is published as `pixa-wallet-mcp`.
 
-## User Types
+## MCP config
 
-### UserInfo
-
-```typescript
-interface UserInfo {
-  referralCode: string;
-  referralCount: number;
-  badgeTier: number;
-  registeredAt: number; // Unix timestamp
-  referrer: Address | null;
+```json
+{
+  "mcpServers": {
+    "pixa": {
+      "command": "npx",
+      "args": ["-y", "pixa-wallet-mcp"],
+      "env": {
+        "ALGORAND_MNEMONIC": "your 25-word mnemonic here",
+        "NETWORK": "algorand-mainnet",
+        "MAX_PER_CALL": "0.10",
+        "MAX_PER_DAY": "20.00"
+      }
+    }
+  }
 }
 ```
 
-### UserStats
+## Common configuration values
 
-```typescript
-interface UserStats {
-  totalReferrals: number;
-  totalEarnings: bigint; // In wei
-  currentTier: number;
-  nextTierProgress: number; // Percentage to next tier
-}
-```
+- `ALGORAND_MNEMONIC`
+- `NETWORK`
+- `MAX_PER_CALL`
+- `MAX_PER_DAY`
 
-## Badge Types
+## What to keep in mind
 
-### BadgeInfo
-
-```typescript
-interface BadgeInfo {
-  name: string;
-  minReferrals: number;
-  level1Rate: number; // In basis points
-  level2Rate: number; // In basis points
-  color: string;
-}
-```
-
-### RewardRates
-
-```typescript
-interface RewardRates {
-  level1Bps: bigint; // Basis points for direct referrer
-  level2Bps: bigint; // Basis points for parent referrer
-}
-```
-
-## NFT Types
-
-### ReputationNFTData
-
-```typescript
-interface ReputationNFTData {
-  tier: number;
-  referrals: number;
-  earnings: bigint; // In wei
-  mintedAt: number; // Unix timestamp
-  tokenId: bigint;
-}
-```
-
-## Quest Types
-
-### Quest
-
-```typescript
-interface Quest {
-  id: number;
-  name: string;
-  description: string;
-  targetReferrals: number;
-  rewardAmount: bigint; // In wei
-  startTime: number; // Unix timestamp
-  endTime: number; // Unix timestamp
-  isActive: boolean;
-}
-```
-
-### UserQuestProgress
-
-```typescript
-interface UserQuestProgress {
-  questId: number;
-  user: Address;
-  progress: number; // Current referral count
-  target: number; // Target referral count
-  completed: boolean;
-  claimed: boolean;
-}
-```
-
-## Season Types
-
-### Season
-
-```typescript
-interface Season {
-  id: number;
-  name: string;
-  description: string;
-  startTime: number; // Unix timestamp
-  endTime: number; // Unix timestamp
-  totalPrizePool: bigint; // In wei
-  winnersCount: number;
-  isActive: boolean;
-}
-```
-
-### SeasonUserStats
-
-```typescript
-interface SeasonUserStats {
-  seasonId: number;
-  user: Address;
-  referrals: number;
-  earnings: bigint; // In wei
-  rank: number;
-}
-```
-
-## Partner Types
-
-### PartnerSubscription
-
-```typescript
-interface PartnerSubscription {
-  partner: Address;
-  tier: number; // 0=Free, 1=Basic, 2=Pro, 3=Enterprise
-  expiryTime: number; // Unix timestamp
-  isActive: boolean;
-}
-```
-
-## Leaderboard Types
-
-### LeaderboardUser
-
-```typescript
-interface LeaderboardUser {
-  rank: number;
-  address: Address;
-  referralCount: number;
-  totalEarnings: bigint; // In wei
-}
-```
-
-### LeaderboardStats
-
-```typescript
-interface LeaderboardStats {
-  totalUsers: number;
-  totalReferrals: number;
-  lastUpdated: number; // Unix timestamp
-}
-```
-
-## Utility Types
-
-### ContractStats
-
-```typescript
-interface ContractStats {
-  totalUsers: number;
-  totalReferrals: number;
-  totalQuests: number;
-  totalSeasons: number;
-  platformFeeBps: number;
-}
-```
-
-## Address Type
-
-```typescript
-type Address = \`0x\${string}\`;
-```
-
-## Hex Type
-
-```typescript
-type Hex = \`0x\${string}\`;
-```
+- keep the mnemonic out of source control
+- use testnet for experiments
+- keep the budget limits conservative during demos
+- prefer the `.mcpb` bundle for non-technical installs

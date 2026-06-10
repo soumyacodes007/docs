@@ -1,73 +1,72 @@
 ---
 title: "Installation"
-description: "Learn how to install and set up the CeloRefer SDK"
+description: "Install PIXA as a drag-and-drop Claude Desktop bundle or as the published npm package."
 ---
 
 # Installation
 
-## Requirements
+## Option 1: Drag-and-drop bundle
 
-- Node.js version 16 or higher
-- A Celo-compatible wallet
-- Access to a Celo node (mainnet, alfajores testnet, or local node)
+This is the easiest path for non-technical users.
 
-## Installing the Package
+Requirements:
 
-Install the CeloRefer SDK and its peer dependencies using npm:
+- Claude Desktop installed
+- a PIXA `.mcpb` bundle
 
-```bash
-npm install celorefer-sdk viem
+Steps:
+
+1. Download the latest PIXA `.mcpb`.
+2. Open Claude Desktop.
+3. Drag the `.mcpb` file into Claude Desktop settings or the extension install area.
+4. Restart Claude Desktop if needed.
+5. Open the PIXA tools panel and start using the wallet.
+
+## Option 2: npm package
+
+This is the developer path.
+
+Package:
+
+- `https://www.npmjs.com/package/pixa-wallet-mcp`
+
+Requirements:
+
+- Node.js 18 or newer
+- Claude Desktop installed
+- an Algorand wallet mnemonic for testnet or mainnet use
+
+Install by adding the package to your MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "pixa": {
+      "command": "npx",
+      "args": ["-y", "pixa-wallet-mcp"],
+      "env": {
+        "ALGORAND_MNEMONIC": "your 25-word mnemonic here",
+        "NETWORK": "algorand-mainnet",
+        "MAX_PER_CALL": "0.10",
+        "MAX_PER_DAY": "20.00"
+      }
+    }
+  }
+}
 ```
 
-Or with yarn:
+## Recommended prerequisites
 
-```bash
-yarn add celorefer-sdk viem
-```
+For the quickest setup:
 
-Or with pnpm:
+- install Claude Desktop first
+- use the `.mcpb` bundle if you want a one-click install
+- use the npm package if you want a config-driven setup
+- keep a clear budget cap in place before spending
 
-```bash
-pnpm add celorefer-sdk viem
-```
+## Notes for demos
 
-Or with bun:
+The published package is best for developers.
+The `.mcpb` bundle is best for live demos and non-technical installs.
 
-```bash
-bun add celorefer-sdk viem
-```
-
-## Peer Dependencies
-
-The CeloRefer SDK has a peer dependency on viem, which is not installed automatically. You must install it yourself:
-
-```bash
-npm install viem
-```
-
-## Supported Environments
-
-The SDK works in both Node.js and browser environments:
-
-- Node.js >= 16
-- Modern browsers (Chrome, Firefox, Safari, Edge)
-- Bundlers like webpack, Rollup, or Vite
-
-## TypeScript Support
-
-The SDK is written in TypeScript and includes type definitions. No additional setup is required for TypeScript projects.
-
-## Basic Setup
-
-```typescript
-import { CeloReferSDK } from 'celorefer-sdk';
-import { createWalletClient, http } from 'viem';
-import { celoAlfajores } from 'viem/chains';
-
-const walletClient = createWalletClient({
-  chain: celoAlfajores,
-  transport: http('YOUR_RPC_URL')
-});
-
-const sdk = CeloReferSDK.create(celoAlfajores, walletClient);
-```
+If you are showing PIXA to judges, use whichever path is less likely to break on the machine you are presenting from.

@@ -1,130 +1,46 @@
 ---
-title: "Utility Functions"
-description: "API reference for utility functions"
+title: "Utility and Safety Notes"
+description: "Shared behavior, configuration, and safety conventions used across PIXA tools."
 ---
 
-# Utility Functions
+# Utility and Safety Notes
 
-Helper functions for common operations.
+PIXA tools share a few conventions.
 
-## generateReferralLink
+## Spending limits
 
-Generates a referral link for sharing.
+Set both:
 
-```typescript
-generateReferralLink(referralCode: string): string
-```
+- per-call limits
+- per-day limits
 
-### Parameters
+That keeps the wallet from being used too broadly if the agent gets a bad prompt.
 
-| Name | Type | Description |
-|------|------|-------------|
-| referralCode | `string` | Referral code to include in the link |
+## Network handling
 
-### Returns
+Keep the network explicit.
 
-`string` - Complete referral link.
+PIXA may run on:
 
-### Example
+- Algorand mainnet
+- Algorand testnet
+- routed service flows through the hub
 
-```typescript
-const link = sdk.generateReferralLink('REF123ABC');
-console.log('Referral link:', link);
-```
+## Error handling
 
-## getBadgeInfo
+Good tool output should be clear enough for a user to understand without reading code.
 
-Gets information about a specific badge tier.
+That means:
 
-```typescript
-getBadgeInfo(tier: number): BadgeInfo
-```
+- tell the user what was attempted
+- tell the user what failed
+- include the next step
 
-### Parameters
+## Future AC2 usage
 
-| Name | Type | Description |
-|------|------|-------------|
-| tier | `number` | Badge tier (0-3) |
+When AC2 is used more broadly, it should follow the same pattern:
 
-### Returns
-
-[BadgeInfo](/api-reference/typescript-types#badgeinfo) object containing badge details.
-
-### Example
-
-```typescript
-const badgeInfo = sdk.getBadgeInfo(2); // Gold badge
-console.log('Badge name:', badgeInfo.name);
-```
-
-## bpsToPercentage
-
-Converts basis points to percentage.
-
-```typescript
-bpsToPercentage(bps: bigint): number
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| bps | `bigint` | Value in basis points |
-
-### Returns
-
-`number` - Percentage value.
-
-### Example
-
-```typescript
-const percentage = sdk.bpsToPercentage(500n); // 500 basis points = 5%
-console.log('Percentage:', percentage);
-```
-
-## getContractStats
-
-Gets contract statistics.
-
-```typescript
-async getContractStats(): Promise<ContractStats>
-```
-
-### Returns
-
-[ContractStats](/api-reference/typescript-types#contractstats) object containing contract statistics.
-
-### Example
-
-```typescript
-const stats = await sdk.getContractStats();
-console.log('Contract stats:', stats);
-```
-
-## generateBadgeSVG
-
-Generates an SVG badge for display.
-
-```typescript
-generateBadgeSVG(tier: number, referrals: number, earnings: bigint, rank: number): string
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| tier | `number` | Badge tier |
-| referrals | `number` | Number of referrals |
-| earnings | `bigint` | Total earnings in wei |
-| rank | `number` | User's rank |
-
-### Returns
-
-`string` - Data URI of the SVG badge.
-
-### Example
-
-```typescript
-const svg = sdk.generateBadgeSVG(2, 25, 1000000000000000000n, 5);
-// Use this SVG in your UI
-```
+- clear request
+- clear approval
+- clear session scope
+- clear revoke path

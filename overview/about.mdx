@@ -1,106 +1,80 @@
 ---
-title: "About CeloRefer"
-description: "Learn about CeloRefer - a decentralized referral system on Celo blockchain"
+title: "About PIXA"
+description: "PIXA is the wallet and payment layer for AI agents, designed around Algorand funding, multichain routing, and human-controlled sessions."
 ---
 
-# About CeloRefer
+# About PIXA
 
-CeloRefer is a decentralized referral system that allows users to earn rewards by referring others to participate in DeFi activities. This SDK provides a simple interface for integrating CeloRefer functionality into your applications.
+PIXA is a wallet and payment system for AI agents.
 
-## Features
+It solves a practical problem: agents can reason and act, but they still need a safe way to pay for APIs, services, swaps, and real-world checkout flows.
 
-- 🔐 **User Management** - Registration with referral codes and genesis user setup
-- 🎖️ **Badge System** - Dynamic tier system (Bronze, Silver, Gold, Platinum) based on referrals
-- 💰 **Dynamic Rewards** - Multi-level referral rewards with tier-based multipliers
-- 🎯 **Quest System** - Gamified challenges with rewards for completing milestones
-- 🏆 **Seasonal Competitions** - Time-based leaderboards with prize pools
-- 🖼️ **Reputation NFTs** - On-chain achievement badges with dynamic metadata
-- 🤝 **Partner Integration** - DApp subscription and authorization system
-- 📊 **Leaderboard** - Real-time ranking and statistics
-- 💵 **Token Operations** - cUSD balance checking and staking
-- 🔗 **Referral Links** - Easy link generation for sharing
+PIXA keeps the user in control while giving the agent enough authority to work:
 
-## Deployed Contracts
+- one Algorand-funded home wallet
+- a hub that can route value to other chains
+- hosted browser flows for approvals and on-ramp actions
+- future session controls for spend limits, time windows, and revocation
+- a path toward AC2-style human-in-the-loop authorization
 
-**Network:** Celo Sepolia Testnet (Chain ID: 11142220)
+## Why this exists
 
-| Contract | Address |
-|----------|----------|
-| CeloReferEnhanced | `0xCCAddAC9Ac91D548ada36684dB2b3796A0c7Ea73` |
-| ReputationNFT | `0xe667437aF0424Ee9cb983b755Ccccf218779E37b` |
-| cUSD | `0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b` |
+The current payment stack for agents is fragmented.
 
-**Block Explorer:** https://alfajores.celoscan.io
+Users usually need to manage:
 
-## Badge System
+- multiple wallets
+- multiple chains
+- API keys
+- manual approvals for anything sensitive
+- one-off onboarding flows for each service
 
-The CeloRefer system includes a tiered badge system based on referral count:
+PIXA replaces that with one control plane:
 
-| Tier | Name | Threshold | Level 1 Rate | Level 2 Rate |
-|------|------|-----------|--------------|---------------|
-| 0 | Bronze | 0+ | 5% | 2% |
-| 1 | Silver | 5+ | 6% | 2.5% |
-| 2 | Gold | 15+ | 7% | 3% |
-| 3 | Platinum | 50+ | 8% | 3.5% |
+1. fund the agent wallet on Algorand
+2. let the agent discover or choose the service
+3. route the payment through PIXA Hub or a hosted flow
+4. keep the user informed and able to approve when needed
 
-**Benefits by Tier:**
-- **Bronze**: Starting tier for new users
-- **Silver**: Improved reward rates + quest access
-- **Gold**: Premium features + priority support
-- **Platinum**: Elite status + maximum benefits + exclusive perks
+## Why decentralize at all
 
-## Reward Structure
+PIXA does not treat decentralization as a slogan. It treats it as a control problem.
 
-**Multi-Level Referral System:**
-- **Level 1 (Direct Referrer)**: Dynamic rate based on badge tier (5-8%)
-- **Level 2 (Grandparent)**: Dynamic rate based on badge tier (2-3.5%)
+The goal is not to hide the backend.
+The goal is to reduce what the backend can do on its own.
 
-**Platform Fee:** 15% (goes to treasury for sustainability)
+That means:
 
-**Reward Distribution:**
-1. User performs action (e.g., stakes 100 cUSD)
-2. Platform fee deducted (15 cUSD to treasury)
-3. Remaining 85 cUSD distributed:
-   - Direct referrer gets their tier rate (e.g., 5% = 4.25 cUSD)
-   - Level 2 referrer gets their tier rate (e.g., 2% = 1.7 cUSD)
-   - Rest goes to user's activity
+- user-owned funds stay in a wallet the user can understand
+- approvals can be moved into a browser or wallet flow
+- session authority can be temporary and revocable
+- the long-term architecture can shift from operator-backed execution toward more explicit on-chain policy
 
-## Key Benefits
+## Where AC2 fits
 
-### For Users
-✅ Earn passive income from referrals  
-✅ Unlock higher tiers and better rewards  
-✅ Compete in seasonal challenges  
-✅ Build on-chain reputation  
-✅ Receive soulbound NFT badges  
+AC2 is the direction for higher-trust actions.
 
-### For Developers
-✅ Ready-to-use referral infrastructure  
-✅ No need to build from scratch  
-✅ Type-safe SDK with TypeScript  
-✅ Customizable quest and season systems  
-✅ White-label support  
+In PIXA, AC2 can become the layer that handles:
 
-### For Platforms
-✅ Viral growth mechanism  
-✅ Sustainable revenue model (platform fees)  
-✅ Gamification increases engagement  
-✅ On-chain reputation system  
-✅ Partner ecosystem management  
+- identity between user and agent
+- signing approvals
+- session creation and revocation
+- delegated authority for time-bound or spend-bound actions
 
-## Technology Stack
+That means PIXA can start simple today and still evolve toward stricter user control later.
 
-- **Blockchain**: Celo (EVM-compatible)
-- **Smart Contracts**: Solidity ^0.8.20
-- **Framework**: OpenZeppelin contracts
-- **SDK**: TypeScript + viem
-- **Token Standard**: ERC-20 (cUSD), ERC-721 (NFT)
+## Built today
 
-## Security Features
+- Algorand wallet-based agent payments
+- x402 payment support
+- multichain routing through the PIXA Hub model
+- on-ramp and off-ramp browser flows
+- rekey-based session experiments
+- published npm package for developers
 
-- ✅ ReentrancyGuard on all state-changing functions
-- ✅ Ownable access control
-- ✅ Input validation and require statements
-- ✅ Soulbound NFTs prevent reputation trading
-- ✅ Partner authorization system
-- ✅ Emergency withdrawal for owner
+## What comes next
+
+- stronger session policy
+- more explicit multichain settlement paths
+- better auditability and proof-of-reserve style checks
+- AC2-based approval flows for sensitive actions

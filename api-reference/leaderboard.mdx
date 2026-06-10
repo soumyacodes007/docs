@@ -1,81 +1,31 @@
 ---
-title: "Leaderboard"
-description: "API reference for global and seasonal leaderboards"
+title: "Operations"
+description: "Practical notes for running PIXA in production and in demos."
 ---
 
-# Leaderboard
+# Operations
 
-Methods for retrieving leaderboard information.
+This page covers the operational side of PIXA: what to watch, what to verify, and what to keep small.
 
-## getTopUsers
+## Daily checks
 
-Gets the top users on the leaderboard.
+- the wallet is funded
+- the spending caps are still correct
+- the hub is healthy
+- hosted flows still open
+- the docs still match the tool names
 
-```typescript
-async getTopUsers(limit: number): Promise<LeaderboardUser[]>
-```
+## Demo checks
 
-### Parameters
+Before a demo, verify:
 
-| Name | Type | Description |
-|------|------|-------------|
-| limit | `number` | Maximum number of users to return |
+1. `check_balance` works
+2. `pay` works on the intended network
+3. `x402_fetch` returns a useful result
+4. `open_onramp` opens the browser flow
+5. `rekey_with_pera` reaches the wallet approval path
 
-### Returns
+## Why this is in tool reference
 
-Array of [LeaderboardUser](/api-reference/typescript-types#leaderboarduser) objects.
-
-### Example
-
-```typescript
-const topUsers = await sdk.getTopUsers(10);
-topUsers.forEach(user => {
-  console.log(`Rank ${user.rank}: ${user.address}`);
-  console.log(`Referrals: ${user.referralCount}, Earnings: ${user.totalEarnings}`);
-});
-```
-
-## getUserRank
-
-Gets a user's rank on the leaderboard.
-
-```typescript
-async getUserRank(userAddress: Address): Promise<number>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| userAddress | `Address` | Address of the user |
-
-### Returns
-
-`number` - User's rank (1-indexed).
-
-### Example
-
-```typescript
-const rank = await sdk.getUserRank('0x1234...');
-console.log('Your rank:', rank);
-```
-
-## getLeaderboardStats
-
-Gets statistics about the leaderboard system.
-
-```typescript
-async getLeaderboardStats(): Promise<LeaderboardStats>
-```
-
-### Returns
-
-[LeaderboardStats](/api-reference/typescript-types#leaderboardstats) object containing leaderboard statistics.
-
-### Example
-
-```typescript
-const stats = await sdk.getLeaderboardStats();
-console.log('Total users:', stats.totalUsers);
-console.log('Total referrals:', stats.totalReferrals);
-```
+Operators need a short checklist more than they need theory.
+This page is the practical runbook for the PIXA flow.

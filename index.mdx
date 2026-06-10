@@ -1,179 +1,97 @@
 ---
-title: "CeloRefer SDK - Decentralized Referral System"
-description: "Build viral growth loops with incentivized referrals on Celo blockchain"
+title: "PIXA Wallet Docs"
+description: "PIXA gives AI agents one Algorand-funded wallet, one control plane, and multiple payment rails."
 ---
 
 <Hero
-  title="CeloRefer SDK"
-  subtitle="A TypeScript SDK for interacting with the CeloRefer referral system on the Celo blockchain"
-  icon="users"
-  accentColor="#35D07F"
+  title="PIXA Wallet Docs"
+  subtitle="A practical docs home for the agent wallet, multichain hub, hosted approval flows, and the npm-published MCP package."
+  icon="wallet"
+  accentColor="#0FB98A"
 >
   <Button href="/guides/quickstart" variant="primary">
-    Get Started
+    Quickstart
   </Button>
   <Button href="/api-reference/introduction" variant="secondary">
-    API Reference
+    Tool Reference
   </Button>
 </Hero>
 
-<Features
-  title="Core Features"
-  features={[
-    {
-      title: "User Management",
-      description: "Registration with referral codes and genesis user setup",
-      icon: "user-plus"
-    },
-    {
-      title: "Badge System",
-      description: "Dynamic tier system (Bronze, Silver, Gold, Platinum) based on referrals",
-      icon: "award"
-    },
-    {
-      title: "Dynamic Rewards",
-      description: "Multi-level referral rewards with tier-based multipliers",
-      icon: "coins"
-    },
-    {
-      title: "Quest System",
-      description: "Gamified challenges with rewards for completing milestones",
-      icon: "gamepad"
-    },
-    {
-      title: "Seasonal Competitions",
-      description: "Time-based leaderboards with prize pools",
-      icon: "trophy"
-    },
-    {
-      title: "Reputation NFTs",
-      description: "On-chain achievement badges with dynamic metadata",
-      icon: "image"
-    }
-  ]}
-/>
+<Section title="What PIXA Is">
 
-<Section title="Quick Start">
+PIXA is the wallet and payment control layer for AI agents.
 
-```bash
-npm install celorefer-sdk viem
-```
+It is built around one simple idea:
 
-```typescript
-import { CeloReferSDK } from 'celorefer-sdk';
-import { createWalletClient, http } from 'viem';
-import { celoAlfajores } from 'viem/chains';
+1. A user funds an Algorand wallet.
+2. PIXA routes payments from that wallet into one or more execution paths.
+3. The agent pays APIs, services, and merchants without handling raw private keys.
+4. Higher-risk actions can move through hosted approval flows, session limits, or AC2-style human-in-the-loop controls.
 
-const walletClient = createWalletClient({
-  chain: celoAlfajores,
-  transport: http()
-});
+PIXA is useful in three places at once:
 
-const sdk = CeloReferSDK.create(celoAlfajores, walletClient);
-
-// Register with a referral code
-const txHash = await sdk.registerUser('REF123ABC');
-```
+- for non-technical users, because they can install the app by drag-and-drop
+- for developers, because `pixa-wallet-mcp` is published on npm
+- for advanced teams, because the architecture can expand into managed sessions, multichain routing, and future decentralized approval layers
 
 </Section>
 
-<Section title="How It Works" subtitle="Simple integration for different stakeholders">
+<Section title="Demo Space" subtitle="Leave this block in place for your YouTube walkthrough or launch video">
 
-<Tabs
-  tabs={[
-    {
-      label: "For Users",
-      content: (
-        <Steps
-          steps={[
-            "**Register**: Sign up with a referral code or as genesis user",
-            "**Get Your Code**: Receive a unique referral code",
-            "**Share**: Invite friends using your referral link",
-            "**Earn**: Receive rewards when referrals perform actions",
-            "**Level Up**: Earn badges as you refer more users",
-            "**Compete**: Participate in quests and seasonal competitions",
-            "**Collect**: Mint your reputation NFT"
-          ]}
-        />
-      )
-    },
-    {
-      label: "For Developers",
-      content: (
-        <Steps
-          steps={[
-            "**Install SDK**: Add celorefer-sdk and viem to your project",
-            "**Initialize**: Create SDK instance with wallet client",
-            "**Integrate**: Add referral registration to your user flow",
-            "**Record Actions**: Call `recordAction()` when users perform valuable actions",
-            "**Automatic Rewards**: System automatically distributes rewards to referrers",
-            "**Customize**: Create custom quests, seasons, and branding"
-          ]}
-        />
-      )
-    },
-    {
-      label: "For Platforms",
-      content: (
-        <Steps
-          steps={[
-            "**Deploy Contracts**: Deploy CeloRefer contracts to Celo network",
-            "**Set Fees**: Configure platform fee percentage",
-            "**Authorize Partners**: Authorize partner DApps",
-            "**Create Quests**: Design milestone challenges with rewards",
-            "**Run Seasons**: Launch time-bound competitions",
-            "**Monitor Growth**: Track ecosystem metrics"
-          ]}
-        />
-      )
-    }
-  ]}
-/>
+<Frame>
+  <div
+    style={{
+      aspectRatio: '16 / 9',
+      width: '100%',
+      borderRadius: '16px',
+      border: '1px solid rgba(15, 185, 138, 0.18)',
+      background:
+        'linear-gradient(135deg, rgba(15,185,138,0.12), rgba(11,93,75,0.06))',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: '#0B5D4B',
+      fontWeight: 600,
+      letterSpacing: '0.02em'
+    }}
+  >
+    YouTube demo embed space
+  </div>
+</Frame>
 
 </Section>
 
-<Section title="Badge System">
-
-| Tier | Name | Threshold | Level 1 Rate | Level 2 Rate |
-|------|------|-----------|--------------|---------------|
-| 0 | Bronze | 0+ | 5% | 2% |
-| 1 | Silver | 5+ | 6% | 2.5% |
-| 2 | Gold | 15+ | 7% | 3% |
-| 3 | Platinum | 50+ | 8% | 3.5% |
-
-</Section>
-
-<Section title="Deployed Contracts">
-
-**Network:** Celo Sepolia Testnet (Chain ID: 11142220)
-
-| Contract | Address |
-|----------|----------|
-| CeloReferEnhanced | `0xCCAddAC9Ac91D548ada36684dB2b3796A0c7Ea73` |
-| ReputationNFT | `0xe667437aF0424Ee9cb983b755Ccccf218779E37b` |
-| cUSD | `0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b` |
-
-</Section>
-
-<Section title="Ready to integrate?" subtitle="Get started with CeloRefer in minutes">
+<Section title="Install Paths">
 
 <Columns cols={2}>
-  <Card
-    title="Developer Quickstart"
-    icon="rocket"
-    href="/guides/quickstart"
-    horizontal
-  >
-    Follow our quickstart guide to integrate CeloRefer into your dApp.
+  <Card title="Non-technical users" icon="download" href="/guides/installation" horizontal>
+    Download the `.mcpb` bundle and drag it into Claude Desktop.
   </Card>
-  
-  <Card
-    title="API Documentation"
-    icon="book"
-    href="/api-reference/introduction"
-    horizontal
-  >
-    Explore the complete API reference for all CeloRefer features.
+
+  <Card title="Developers" icon="terminal" href="https://www.npmjs.com/package/pixa-wallet-mcp" horizontal>
+    Install `pixa-wallet-mcp` with `npx` or add it to your MCP config.
+  </Card>
+</Columns>
+
+</Section>
+
+<Section title="What You Can Build">
+
+<Columns cols={2}>
+  <Card title="Normal payments" icon="credit-card" href="/overview/components" horizontal>
+    Agents pay for API calls and services from one Algorand-based wallet.
+  </Card>
+
+  <Card title="Multichain flows" icon="shuffle" href="/overview/architecture" horizontal>
+    PIXA can fund an Algorand wallet and then route value to other chains through the hub.
+  </Card>
+
+  <Card title="Managed sessions" icon="lock" href="/overview/about" horizontal>
+    Add time limits, spend caps, revocation, and future AC2-based approvals.
+  </Card>
+
+  <Card title="Testing and docs" icon="check" href="/guides/testing" horizontal>
+    Keep the repo reviewable with a focused test matrix and simple verification steps.
   </Card>
 </Columns>
 

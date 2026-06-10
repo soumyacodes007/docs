@@ -1,127 +1,35 @@
 ---
-title: "Quest System"
-description: "API reference for quest creation and management"
+title: "Spending Tools"
+description: "Budget reporting and spending visibility."
 ---
 
-# Quest System
+# Spending Tools
 
-Methods for working with the quest system.
+PIXA is most useful when the user can see what happened after an agent spends money.
 
-## getQuest
+## `spending_report`
 
-Gets details for a specific quest.
+Use this tool to summarize spending activity.
 
-```typescript
-async getQuest(questId: number): Promise<Quest>
-```
+Typical output should help answer:
 
-### Parameters
+- what was spent
+- where it went
+- which tool or service caused the spend
+- how much budget remains
 
-| Name | Type | Description |
-|------|------|-------------|
-| questId | `number` | ID of the quest |
+## Why this matters
 
-### Returns
+Budget visibility is what turns a wallet into a control layer.
 
-[Quest](/api-reference/typescript-types#quest) object containing quest details.
+Without a spending report, the user only knows that money left the wallet.
+With it, the user can understand the agent's behavior.
 
-### Example
+## Recommended usage
 
-```typescript
-const quest = await sdk.getQuest(1);
-console.log('Quest name:', quest.name);
-console.log('Target referrals:', quest.targetReferrals);
-```
+Call this tool after:
 
-## getUserQuestProgress
-
-Gets a user's progress on a specific quest.
-
-```typescript
-async getUserQuestProgress(userAddress: Address, questId: number): Promise<UserQuestProgress>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| userAddress | `Address` | Address of the user |
-| questId | `number` | ID of the quest |
-
-### Returns
-
-[UserQuestProgress](/api-reference/typescript-types#userquestprogress) object containing progress information.
-
-### Example
-
-```typescript
-const progress = await sdk.getUserQuestProgress('0x1234...', 1);
-console.log('Progress:', progress.progress);
-console.log('Completed:', progress.completed);
-```
-
-## claimQuestReward
-
-Claims the reward for a completed quest.
-
-```typescript
-async claimQuestReward(questId: number): Promise<Hex>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| questId | `number` | ID of the quest |
-
-### Returns
-
-`Hex` - Transaction hash of the reward claim.
-
-### Example
-
-```typescript
-const progress = await sdk.getUserQuestProgress('0x1234...', 1);
-if (progress.completed) {
-  const txHash = await sdk.claimQuestReward(1);
-  console.log('Claimed quest reward:', txHash);
-}
-```
-
-## listActiveQuests
-
-Lists all active quests.
-
-```typescript
-async listActiveQuests(): Promise<Quest[]>
-```
-
-### Returns
-
-Array of [Quest](/api-reference/typescript-types#quest) objects.
-
-### Example
-
-```typescript
-const quests = await sdk.listActiveQuests();
-console.log('Active quests:', quests.length);
-```
-
-## getQuestCount
-
-Gets the total number of quests.
-
-```typescript
-async getQuestCount(): Promise<number>
-```
-
-### Returns
-
-`number` - Total quest count.
-
-### Example
-
-```typescript
-const count = await sdk.getQuestCount();
-console.log('Total quests:', count);
-```
+- a payment sequence
+- a demo run
+- a session that allowed multiple payments
+- any flow where the user may ask, "What did the agent do?"

@@ -1,11 +1,11 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "name": "CeloRefer SDK",
+  "name": "PIXA Wallet Docs",
   "theme": "mint",
   "colors": {
-    "primary": "#35D07F",
-    "light": "#72F3AE",
-    "dark": "#1A9E5D"
+    "primary": "#0FB98A",
+    "light": "#68F0CC",
+    "dark": "#0B5D4B"
   },
   "favicon": "/favicon.svg",
   "navigation": {
@@ -32,50 +32,50 @@
         ]
       },
       {
-        "tab": "Guides",
+        "tab": "Getting Started",
         "groups": [
           {
-            "group": "Getting Started",
+            "group": "Install PIXA",
             "pages": [
               "guides/quickstart",
               "guides/installation"
             ]
           },
           {
-            "group": "Integration",
+            "group": "Quality",
             "pages": [
-              "guides/user-workflow",
-              "guides/developer-workflow",
-              "guides/platform-workflow"
+              "guides/testing",
+              "guides/contributing",
+              "development"
             ]
           }
         ]
       },
       {
-        "tab": "API Reference",
+        "tab": "Tool Reference",
         "groups": [
           {
-            "group": "Core Modules",
+            "group": "Wallet and Payments",
             "pages": [
               "api-reference/introduction",
               "api-reference/user-management",
               "api-reference/referral-operations",
-              "api-reference/badge-reputation",
-              "api-reference/nft-operations"
+              "api-reference/badge-reputation"
             ]
           },
           {
-            "group": "Advanced Features",
+            "group": "Funding and Routing",
             "pages": [
+              "api-reference/nft-operations",
               "api-reference/quest-system",
               "api-reference/seasonal-competitions",
-              "api-reference/partner-integration",
-              "api-reference/leaderboard"
+              "api-reference/partner-integration"
             ]
           },
           {
-            "group": "Utilities",
+            "group": "Operations and Types",
             "pages": [
+              "api-reference/leaderboard",
               "api-reference/utility-functions",
               "api-reference/typescript-types"
             ]
@@ -87,8 +87,13 @@
       "anchors": [
         {
           "anchor": "GitHub",
-          "href": "https://github.com/celorefer",
+          "href": "https://github.com/soumyacodes007/algorand-wallet",
           "icon": "github"
+        },
+        {
+          "anchor": "npm",
+          "href": "https://www.npmjs.com/package/pixa-wallet-mcp",
+          "icon": "package"
         }
       ]
     }
@@ -100,14 +105,14 @@
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:support@celorefer.com"
+        "label": "npm package",
+        "href": "https://www.npmjs.com/package/pixa-wallet-mcp"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.celorefer.com"
+      "label": "Quickstart",
+      "href": "/guides/quickstart"
     }
   },
   "contextual": {
@@ -118,9 +123,7 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/celorefer",
-      "github": "https://github.com/celorefer",
-      "discord": "https://discord.gg/celorefer"
+      "github": "https://github.com/soumyacodes007/algorand-wallet"
     }
   }
 }

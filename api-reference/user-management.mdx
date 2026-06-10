@@ -1,246 +1,33 @@
 ---
-title: "User Management"
-description: "API reference for user registration and management"
+title: "Wallet Tools"
+description: "Wallet inspection, funding, and address management tools."
 ---
 
-# User Management
+# Wallet Tools
 
-Methods for registering users and retrieving user information.
+These tools help the agent understand the wallet before it spends anything.
 
-## create
+## `check_balance`
 
-Creates a new instance of the CeloRefer SDK.
+Use this tool to inspect the current wallet address and the available balance.
 
-```typescript
-static create(chain: Chain, walletClient: WalletClient): CeloReferSDK
-```
+Typical use:
 
-### Parameters
+- confirm the user has enough USDC before calling `pay`
+- confirm the wallet the agent is using is the expected one
+- display the current network in the UI or logs
 
-| Name | Type | Description |
-|------|------|-------------|
-| chain | `Chain` | The Celo chain to connect to (e.g., celoAlfajores) |
-| walletClient | `WalletClient` | Viem wallet client with account |
+## `request_funding`
 
-### Returns
+Use this tool when the wallet needs a funding link or a simple top-up path.
 
-`CeloReferSDK` - New SDK instance.
+Typical use:
 
-### Example
+- show a user how to fund the agent wallet
+- create a clean handoff to on-chain funding
+- support onboarding when the wallet starts empty
 
-```typescript
-import { CeloReferSDK } from 'celorefer-sdk';
-import { createWalletClient, http } from 'viem';
-import { celoAlfajores } from 'viem/chains';
+## When to use these tools
 
-const walletClient = createWalletClient({
-  chain: celoAlfajores,
-  transport: http()
-});
-
-const sdk = CeloReferSDK.create(celoAlfajores, walletClient);
-```
-
-## registerUser
-
-Registers a new user in the CeloRefer system with a referral code.
-
-```typescript
-async registerUser(referralCode: string): Promise<Hex>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| referralCode | `string` | Referral code of the referring user |
-
-### Returns
-
-`Hex` - Transaction hash of the registration.
-
-### Example
-
-```typescript
-const txHash = await sdk.registerUser('REF123ABC');
-console.log('Registration transaction hash:', txHash);
-```
-
-## registerGenesisUser
-
-Registers a new user as a genesis user (first user with a custom code).
-
-```typescript
-async registerGenesisUser(customCode: string): Promise<Hex>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| customCode | `string` | Custom referral code for the genesis user |
-
-### Returns
-
-`Hex` - Transaction hash of the registration.
-
-### Example
-
-```typescript
-const txHash = await sdk.registerGenesisUser('MYCODE');
-console.log('Genesis registration transaction hash:', txHash);
-```
-
-## getUserInfo
-
-Retrieves detailed information about a user.
-
-```typescript
-async getUserInfo(userAddress: Address): Promise<UserInfo>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| userAddress | `Address` | Address of the user |
-
-### Returns
-
-[UserInfo](/api-reference/typescript-types#userinfo) object containing user details.
-
-### Example
-
-```typescript
-const userInfo = await sdk.getUserInfo('0x1234...');
-console.log('Referral code:', userInfo.referralCode);
-console.log('Referral count:', userInfo.referralCount);
-console.log('Badge tier:', userInfo.badgeTier);
-```
-
-## getUserStats
-
-Gets statistics for a user.
-
-```typescript
-async getUserStats(userAddress: Address): Promise<UserStats>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| userAddress | `Address` | Address of the user |
-
-### Returns
-
-[UserStats](/api-reference/typescript-types#userstats) object containing user statistics.
-
-### Example
-
-```typescript
-const stats = await sdk.getUserStats('0x1234...');
-console.log('Total referrals:', stats.totalReferrals);
-console.log('Total earnings:', stats.totalEarnings);
-```
-
-## getBadgeTier
-
-Gets the badge tier for a user.
-
-```typescript
-async getBadgeTier(userAddress: Address): Promise<number>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| userAddress | `Address` | Address of the user |
-
-### Returns
-
-`number` - Badge tier (0-3 for Bronze, Silver, Gold, Platinum).
-
-### Example
-
-```typescript
-const tier = await sdk.getBadgeTier('0x1234...');
-console.log('Badge tier:', tier);
-```
-
-## getReferralCode
-
-Gets the referral code for a user.
-
-```typescript
-async getReferralCode(userAddress: Address): Promise<string>
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| userAddress | `Address` | Address of the user |
-
-### Returns
-
-`string` - Referral code for the user.
-
-### Example
-
-```typescript
-const code = await sdk.getReferralCode('0x1234...');
-console.log('Referral code:', code);
-```
-
-## generateReferralLink
-
-Generates a referral link for sharing.
-
-```typescript
-generateReferralLink(referralCode: string): string
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| referralCode | `string` | Referral code to include in the link |
-
-### Returns
-
-`string` - Complete referral link.
-
-### Example
-
-```typescript
-const link = sdk.generateReferralLink('REF123ABC');
-console.log('Referral link:', link);
-```
-
-## getBadgeInfo
-
-Gets information about a specific badge tier.
-
-```typescript
-getBadgeInfo(tier: number): BadgeInfo
-```
-
-### Parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| tier | `number` | Badge tier (0-3) |
-
-### Returns
-
-[BadgeInfo](/api-reference/typescript-types#badgeinfo) object containing badge details.
-
-### Example
-
-```typescript
-const badgeInfo = sdk.getBadgeInfo(2); // Gold badge
-console.log('Badge name:', badgeInfo.name);
-console.log('Level 1 rate:', badgeInfo.level1Rate);
-```
+Use wallet tools before any payment or session setup.
+They are the first safety check in the PIXA flow.

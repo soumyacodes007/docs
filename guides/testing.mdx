@@ -1,0 +1,59 @@
+---
+title: "Testing"
+description: "How to test PIXA before shipping or presenting it."
+---
+
+# Testing
+
+PIXA should be tested at three levels:
+
+1. the package itself
+2. the browser flows
+3. the backend and live payment paths
+
+## Package tests
+
+From the repo root:
+
+```bash
+npm test
+npm run typecheck
+npm run build
+```
+
+The package tests should cover:
+
+- balance and wallet helpers
+- x402 payment request handling
+- onramp launch logic
+- rekey/session preparation
+- spending and budget rules
+
+## Browser flow checks
+
+Verify these flows in a browser before a live demo:
+
+- on-ramp opens correctly
+- rekey approval reaches Pera
+- hosted flows open outside Claude when required
+- UI labels still match the current behavior
+
+## Hub and payment checks
+
+If you are testing the hub or multichain path:
+
+- check the hub health endpoint
+- confirm the payment headers are generated correctly
+- verify the local or deployed treasury state
+- confirm the cross-chain route returns a real result
+
+## What good looks like
+
+A good test matrix does not need to be huge.
+It needs to prove that the important paths are stable:
+
+- the package starts
+- the tools are wired
+- the tests are green
+- the demos work
+- the risky flows are documented
