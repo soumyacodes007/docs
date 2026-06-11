@@ -1,106 +1,195 @@
 ---
 title: "Architecture"
-description: "System, payment, multichain, and approval architectures for PIXA."
+description: "System, payment, multichain, facilitator, and AC2 architectures for PIXA."
 ---
 
 # Architecture
 
-PIXA is intentionally split into a few layers:
+PIXA is easiest to understand as a layered system:
 
-- the MCP package that agents and Claude Desktop load
-- the hosted or local browser flows for approvals
-- the PIXA Hub treasury and payment router
-- optional external services such as on-ramp providers and DEXs
-- future AC2-style authorization for delegated sessions
+- the MCP package that Claude Desktop or another agent runtime loads
+- the browser-based approval flows for on-ramp, rekey, and other user actions
+- the PIXA Hub payment router for non-Algorand settlement paths
+- the service discovery and x402 payment layer
+- the future AC2 session layer for bounded delegation
 
-## 1. System Architecture
+## 1. Main System View
 
-<Frame>
-  <img src="/images/pixa-architecture-system.svg" alt="PIXA system architecture placeholder" />
-</Frame>
+This is the simplest way to read PIXA end to end.
 
-PIXA starts with a user-funded Algorand wallet and fans out from there.
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "primaryColor": "#ffffff",
+    "primaryTextColor": "#000000",
+    "primaryBorderColor": "#000000",
+    "secondaryColor": "#ffffff",
+    "secondaryTextColor": "#000000",
+    "secondaryBorderColor": "#000000",
+    "tertiaryColor": "#ffffff",
+    "tertiaryTextColor": "#000000",
+    "tertiaryBorderColor": "#000000",
+    "lineColor": "#000000",
+    "textColor": "#000000",
+    "fontFamily": "ui-sans-serif, system-ui, sans-serif"
+  }
+}%%
+flowchart LR
+  U[User] -->|funds wallet| A[Algorand wallet]
+  U -->|uses| M[PIXA MCP package]
+  M -->|search / pay / fetch| S[Service discovery and x402 layer]
+  M -->|approval flows| B[Browser / hosted pages]
+  M -->|non-Algorand route| H[PIXA Hub]
+  H -->|settles| F[Specific facilitator or partner rail]
+  S -->|resource access| X[API or service]
+  B -->|on-ramp / rekey / approvals| U
+```
 
-- the MCP server exposes wallet and payment tools
-- the agent uses those tools to inspect balance, pay APIs, and launch flows
-- the hub handles treasury-backed payment routing when a service is not on Algorand
-- the browser handles approval-heavy flows like on-ramp and rekey
+PIXA keeps one user-visible wallet, then routes the rest of the complexity behind the scenes.
 
-## 2. Normal Payment Flow
+## 2. Normal Algorand Payment Flow
 
-<Frame>
-  <img src="/images/pixa-architecture-payment.svg" alt="PIXA normal payment flow placeholder" />
-</Frame>
+This is the fast path when the service can be paid directly from the Algorand side.
 
-The normal flow is simple:
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "primaryColor": "#ffffff",
+    "primaryTextColor": "#000000",
+    "primaryBorderColor": "#000000",
+    "secondaryColor": "#ffffff",
+    "secondaryTextColor": "#000000",
+    "secondaryBorderColor": "#000000",
+    "lineColor": "#000000",
+    "textColor": "#000000"
+  }
+}%%
+flowchart TD
+  U[User] --> A[Algorand wallet]
+  A --> P[PIXA MCP pay tool]
+  P --> D[Detect payment chain]
+  D -->|Algorand route| L[Algorand API / direct payment]
+  L --> S[Service returns resource]
+  S --> O[Done]
+```
 
-1. the agent requests a tool
-2. PIXA checks funds and policy
-3. the wallet signs the payment authorization
-4. the service verifies the payment and returns the resource
+This is the cleanest path for direct wallet-backed API access.
 
-This is the path for x402-style API access and other straightforward wallet operations.
+## 3. Non-Algorand Payment Flow
 
-## 3. Multichain Payment Flow
+When the target service is on another chain, PIXA adds a hub step and a small routing fee.
 
-<Frame>
-  <img src="/images/pixa-architecture-multichain.svg" alt="PIXA multichain payment flow placeholder" />
-</Frame>
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "primaryColor": "#ffffff",
+    "primaryTextColor": "#000000",
+    "primaryBorderColor": "#000000",
+    "secondaryColor": "#ffffff",
+    "secondaryTextColor": "#000000",
+    "secondaryBorderColor": "#000000",
+    "lineColor": "#000000",
+    "textColor": "#000000"
+  }
+}%%
+flowchart TD
+  U[User] --> A[Algorand wallet]
+  A --> P[PIXA MCP pay tool]
+  P --> D[Detect payment chain]
+  D -->|Non-Algorand route| H[PIXA Hub]
+  H --> C[Add routing fee: amount + 1%]
+  C --> F[Specific facilitator / settlement path]
+  F --> S[Service returns resource]
+  S --> O[Done]
+```
 
-PIXA is built around an Algorand home wallet, but the point is not to stay locked to one chain.
+This is the operator-backed path that lets PIXA support other chains without giving the user multiple wallets.
 
-For non-Algorand payments:
+## 4. Multi-Facilitator Settlement View
 
-- the user funds the Algorand side
-- PIXA Hub receives or records the payment intent
-- the hub routes value to the target chain or service path
-- the user still sees one wallet and one control surface
+PIXA does not need to rely on only one execution path forever. Different services can be settled by different facilitators.
 
-This is why the docs should describe PIXA as a payment control plane, not just a single-chain wallet.
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "primaryColor": "#ffffff",
+    "primaryTextColor": "#000000",
+    "primaryBorderColor": "#000000",
+    "secondaryColor": "#ffffff",
+    "secondaryTextColor": "#000000",
+    "secondaryBorderColor": "#000000",
+    "lineColor": "#000000",
+    "textColor": "#000000"
+  }
+}%%
+flowchart LR
+  U[User] --> M[PIXA MCP]
+  M --> H[PIXA Hub]
+  H --> F1[Facilitator A]
+  H --> F2[Facilitator B]
+  H --> F3[Direct chain settlement]
+  F1 --> S1[Service class 1]
+  F2 --> S2[Service class 2]
+  F3 --> S3[Service class 3]
+```
 
-## 4. Multi-Facilitator Topology
-
-<Frame>
-  <img src="/images/pixa-architecture-facilitators.svg" alt="PIXA multi-facilitator topology placeholder" />
-</Frame>
-
-PIXA can support more than one execution path behind the scenes.
-
-That matters because:
-
-- different chains have different settlement speeds
-- different services have different trust models
-- some flows should use a fast operator-backed path
-- others should move toward more explicit on-chain policy or partner-based routing
-
-The user should not need to understand every rail in the middle.
-They should only need to understand what they approved.
+The point is not that one backend must handle everything. The point is that the user should only see one control surface.
 
 ## 5. AC2 Session Model
 
-<Frame>
-  <img src="/images/pixa-architecture-ac2.svg" alt="PIXA AC2 session model placeholder" />
-</Frame>
+This is the future bounded-authority layer for higher-risk actions.
 
-AC2 is the future control layer for sensitive actions.
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "primaryColor": "#ffffff",
+    "primaryTextColor": "#000000",
+    "primaryBorderColor": "#000000",
+    "secondaryColor": "#ffffff",
+    "secondaryTextColor": "#000000",
+    "secondaryBorderColor": "#000000",
+    "lineColor": "#000000",
+    "textColor": "#000000"
+  }
+}%%
+flowchart TD
+  U[User] --> A[AC2 approval request]
+  A --> W[Wallet or hosted approval page]
+  W --> S[Session created]
+  S --> E[Expiry or spend cap]
+  S --> R[Agent operates inside session]
+  U --> V[Revoke session]
+  V --> X[Authority removed]
+```
 
-In that model:
+AC2 is how PIXA can move from simple payment routing to explicit delegated authority.
 
-- the agent requests authority
-- the user approves through a wallet or hosted page
-- the session is time-bound or spend-bound
-- the authority can be revoked later without giving away the main key
+## 6. What Each Block Does
 
-That is the cleanest path to safer agent control.
+- MCP package: exposes the tools the agent calls
+- Browser page: handles approval-heavy actions that should not stay inside the Claude iframe
+- PIXA Hub: handles treasury-backed routing and non-Algorand settlement
+- Facilitator: executes the actual settlement or relay step for a specific network
+- AC2: turns approval into a temporary, revocable session instead of a one-time yes/no click
 
-## 6. What the diagram should communicate
+## 7. Reading Order
 
-If you replace the placeholders with final diagrams, each one should show a different idea:
+If you are explaining PIXA to a judge or developer, read it in this order:
 
-- system overview
-- ordinary payment route
-- multichain payment route
-- multi-facilitator execution route
-- AC2 session and revocation route
+1. one Algorand-funded wallet
+2. direct Algorand payment path
+3. non-Algorand hub path with the routing fee
+4. multi-facilitator settlement behind the hub
+5. AC2 session control for stricter authority
 
-Those five views are enough to explain the architecture to both developers and judges.
+That order matches the product from simplest to most advanced.
