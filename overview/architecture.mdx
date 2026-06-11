@@ -13,9 +13,21 @@ PIXA is easiest to understand as a layered system:
 - the service discovery and x402 payment layer
 - the future AC2 session layer for bounded delegation
 
-## 1. Main System View
+## 1. Core Architecture
 
-This is the simplest way to read PIXA end to end.
+This is the main architecture image for PIXA.
+
+<Frame>
+  <img src="/images/image.png" alt="PIXA core architecture diagram" />
+</Frame>
+
+This diagram shows the primary product split:
+
+- agent flow starts with search and payment intent
+- the chain is detected after the payment attempt
+- Algorand routes stay free and direct
+- non-Algorand routes add the PIXA Hub fee and settle through a facilitator
+- the service is released after settlement
 
 ```mermaid
 %%{init: {

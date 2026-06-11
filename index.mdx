@@ -36,26 +36,25 @@ PIXA is useful in three places at once:
 
 </Section>
 
-<Section title="Demo Space" subtitle="Leave this block in place for your YouTube walkthrough or launch video">
+<Section title="Demo Space" subtitle="Use this block for your YouTube walkthrough or launch video">
 
 <Frame>
-  <div
-    style={{
-      aspectRatio: '16 / 9',
-      width: '100%',
-      borderRadius: '16px',
-      border: '1px solid rgba(15, 185, 138, 0.18)',
-      background:
-        'linear-gradient(135deg, rgba(15,185,138,0.12), rgba(11,93,75,0.06))',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: '#0B5D4B',
-      fontWeight: 600,
-      letterSpacing: '0.02em'
-    }}
-  >
-    YouTube demo embed space
+  <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%' }}>
+    <iframe
+      src="https://www.youtube.com/embed/DAMOl6qfrh0?si=GjeBOAqFHgdhiPqw"
+      title="PIXA demo video"
+      loading="lazy"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowFullScreen
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        border: 0,
+        borderRadius: '16px'
+      }}
+    />
   </div>
 </Frame>
 
