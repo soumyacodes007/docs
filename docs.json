@@ -87,7 +87,7 @@
       "anchors": [
         {
           "anchor": "GitHub",
-          "href": "https://github.com/soumyacodes007/algorand-wallet",
+          "href": "https://github.com/soumyacodes007/Pixa",
           "icon": "github"
         },
         {
@@ -112,7 +112,7 @@
     "primary": {
       "type": "button",
       "label": "Quickstart",
-      "href": "/guides/quickstart"
+      "href": "/guides/quickstart/"
     }
   },
   "contextual": {
