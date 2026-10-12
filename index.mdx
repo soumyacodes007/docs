@@ -1,20 +1,85 @@
 ---
-title: "Introduction"
-description: "Welcome to your project"
+title: "Use Arkiv incognito"
+description: "Arkognito keeps every Arkiv record owned by its user while making records impossible to group by person."
+sidebarTitle: "Introduction"
+keywords:
+  - "Arkognito"
+  - "Arkiv privacy"
+  - "unlinkable ownership"
+  - "stealth addresses for data"
 ---
 
-Write a short description of your product here. What it does, who it's for, and what they can accomplish with it.
+Arkognito is an open-source SDK and a set of self-hostable services that make writes to
+[Arkiv](https://arkiv.network) unlinkable. Each record is owned by a fresh one-time address that
+only its user can recompute, and is written by a shared relayer in a shuffled, padded batch. The
+user still owns every record, can find all of them again from any device, and can prove that one
+of them is theirs without revealing the others.
 
-<Tip>
-  Ready to make this your own? Start by editing this page. Update your `docs.json` file to customize your site. Then fill out the [Quickstart](/quickstart) page.
-</Tip>
+<Warning>
+  Arkognito is experimental and runs on the Arkiv Tiramisu testnet only. The protocol is version
+  0.x and may change, and the cryptography has not had an outside audit. See
+  [Security](/operations/security).
+</Warning>
 
-<Card title="Quickstart" icon="rocket" href="/quickstart">
-  This card links to the quickstart page in your project.
-</Card>
-<Card title="Components" icon="puzzle-piece" href="https://mintlify.com/docs/components">
-  Add cards, callouts, steps, tabs, and more to design and structure your pages.
-</Card>
-<Card title="Settings" icon="gear" href="https://mintlify.com/docs/organize/settings">
-  Set your site name, branding, and navigation in the `docs.json` file.
-</Card>
+## The problem in one query
+
+Every Arkiv entity stores its `$owner` and `$creator`, and both are indexed. Anyone can run:
+
+```text
+$owner = addr(0xYourWallet)
+```
+
+and get every record that wallet ever wrote, in every app. Separate small actions (a stock report
+in one app, a note in another, a sketch in a third) add up to a profile. Expiring records does not
+help: the data stays readable in transaction history. [Read more](/concepts/linkability).
+
+## What Arkognito changes
+
+| | Plain Arkiv | With Arkognito |
+| --- | --- | --- |
+| `$owner` of your records | Your wallet, on every record | A different one-time address on every record |
+| `$creator` | Your wallet | A relayer, shared by every user |
+| One owner query on your wallet | Returns everything you wrote | Returns nothing |
+| Who pays gas | You, per write | The relayer |
+| Finding your records | Owner query | `myEntities()`, from any device, without telling anyone which records are yours |
+| Proving one record is yours | Implicit | `proveOwnership()`, for one record, one verifier, one challenge |
+
+Measured on Tiramisu, an outside observer trying to group 50 records from 5 people did no better
+than random guessing. See the [linkage experiment](/architecture/linkage-experiment).
+
+{/* DIAGRAM: before-after
+    File: /images/diagrams/before-after.png
+    Show: Left "Plain Arkiv": one wallet box with arrows to 5 records, each labelled owner = 0xWallet,
+    creator = 0xWallet. Right "Arkognito": the same 5 records, each with a different owner S1..S5 and
+    the same creator = relayer, the user's wallet connected to nothing on chain. */}
+
+## Start here
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Run a relayer and write your first private record in about five minutes.
+  </Card>
+  <Card title="Add it to an app" icon="code" href="/guides/add-to-an-app">
+    Replace `createEntity` with the private client. Same parameters.
+  </Card>
+  <Card title="Self-host the network" icon="server" href="/operations/self-hosting">
+    Two relayers, a token issuer and an OHTTP relay with one `docker compose up`.
+  </Card>
+  <Card title="Understand the design" icon="layers" href="/architecture/overview">
+    How one-time owners, batching, blind tokens and Oblivious HTTP fit together.
+  </Card>
+</CardGroup>
+
+## What is in the box
+
+- **SDK** (`arkognito`): derives one-time owners in a Web Worker, seals and pads records, finds
+  and verifies your records privately, issues ownership proofs, handles rate-limit tokens and
+  Oblivious HTTP. Works in browsers and Node.
+- **Relayer**: batches records from many users, writes them to Arkiv, hands each to its one-time
+  owner, and pays the gas. Anyone can run one.
+- **Token issuer**: hands out daily blind rate-limit tokens, so relayers can limit writes per
+  person without learning who wrote what.
+- **OHTTP relay**: forwards encrypted requests so relayers never see users' IP addresses.
+
+Everything is MIT licensed, and all shared state lives on Arkiv: there is no database to run and
+no operator to trust. [Source on GitHub](https://github.com/soumyacodes007/Arkognito).

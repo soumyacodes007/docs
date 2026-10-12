@@ -1,72 +1,199 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "theme": "palm",
+  "name": "Arkognito",
+  "description": "Use Arkiv incognito: records stay yours, but nobody can tell which records belong to the same person.",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#4F3BD1",
+    "light": "#A99BFF",
+    "dark": "#3E2DB0"
   },
   "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "/"
+  },
+  "icons": {
+    "library": "lucide"
+  },
+  "fonts": {
+    "family": "Inter"
+  },
+  "appearance": {
+    "default": "system",
+    "strict": false
+  },
+  "background": {
+    "decoration": "grid"
+  },
+  "styling": {
+    "eyebrows": "breadcrumbs",
+    "codeblocks": {
+      "theme": {
+        "light": "github-light",
+        "dark": "github-dark"
+      }
+    }
+  },
+  "banner": {
+    "content": "Experimental, testnet only (Arkiv Tiramisu). The protocol may still change and has not had an outside audit. [Read the security notes](/operations/security).",
+    "dismissible": true,
+    "type": "warning"
+  },
   "navigation": {
-    "pages": [
+    "tabs": [
       {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": ["index", "quickstart"]
+          },
+          {
+            "group": "Build",
+            "pages": [
+              "guides/add-to-an-app",
+              "guides/migrate-from-arkiv-sdk",
+              "guides/read-records",
+              "guides/ownership-proofs",
+              "guides/private-payloads",
+              "guides/rate-limit-tokens",
+              "guides/oblivious-http"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "concepts/linkability",
+              "concepts/one-time-owners",
+              "concepts/relayers-and-batching",
+              "concepts/record-envelope",
+              "concepts/finding-your-records",
+              "concepts/blind-tokens",
+              "concepts/fingerprinting",
+              "concepts/threat-model"
+            ]
+          },
+          {
+            "group": "Operate",
+            "pages": [
+              "operations/self-hosting",
+              "operations/deploy-railway-vercel",
+              "operations/ohttp-relay",
+              "operations/security",
+              "operations/troubleshooting"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/sdk",
+              "reference/relayer-api",
+              "reference/configuration",
+              "reference/entities",
+              "reference/protocol",
+              "reference/edge-cases"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Architecture",
+        "groups": [
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/linkage-experiment",
+              "architecture/arkiv-notes"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "openapi": "openapi.json"
+      },
+      {
+        "tab": "SDK",
+        "groups": [
+          {
+            "group": "Integrate",
+            "pages": [
+              "guides/add-to-an-app",
+              "guides/migrate-from-arkiv-sdk",
+              "guides/read-records",
+              "guides/ownership-proofs"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": ["reference/sdk", "reference/protocol"]
+          }
         ]
       }
     ],
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
+          "anchor": "GitHub",
+          "href": "https://github.com/soumyacodes007/Arkognito",
+          "icon": "github"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "Arkiv",
+          "href": "https://arkiv.network",
+          "icon": "database"
         }
       ]
     }
   },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:support@mintlify.com"
+        "type": "github",
+        "href": "https://github.com/soumyacodes007/Arkognito"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "label": "Start building",
+      "href": "/quickstart"
+    }
+  },
+  "search": {
+    "prompt": "Search Arkognito docs..."
+  },
+  "api": {
+    "playground": {
+      "display": "interactive"
+    },
+    "examples": {
+      "languages": ["curl", "javascript"],
+      "defaults": "required"
     }
   },
   "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
+    "options": ["copy", "view", "chatgpt", "claude", "cursor", "vscode"],
+    "display": "header"
+  },
+  "metadata": {
+    "timestamp": true
+  },
+  "seo": {
+    "indexing": "navigable"
+  },
+  "errors": {
+    "404": {
+      "redirect": false,
+      "title": "Page not found",
+      "description": "This Arkognito documentation page does not exist."
+    }
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/soumyacodes007/Arkognito"
     }
   }
 }

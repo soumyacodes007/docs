@@ -1,0 +1,64 @@
+---
+title: "The linkability problem"
+description: "Why one owner query exposes a user's whole history on Arkiv, and who it harms."
+keywords:
+  - "Arkiv privacy"
+  - "$owner"
+  - "$creator"
+  - "linkability"
+---
+
+## Every record names its writer
+
+Every Arkiv entity carries two system attributes:
+
+- `$owner`: the address that controls the entity. It can change through an ownership transfer.
+- `$creator`: the address that created it. It never changes.
+
+Both are indexed, so both are queryable by anyone:
+
+```text
+$owner = addr(0x2F5d…d31e)
+$creator = addr(0x2F5d…d31e)
+```
+
+Either query returns everything that wallet ever wrote, across every Arkiv app.
+
+## Why that matters
+
+Separate small actions add up:
+
+- a stock report on a pharmacy app, a question on a mentorship app and a note on a wiki app are
+  one query away from a single activity profile;
+- the list of medicines one wallet keeps reporting can hint at a health condition;
+- the link is permanent: `$creator` never changes, even if ownership is later transferred.
+
+**Who is harmed:** end users, whose actions are joined into profiles they never agreed to; and
+builders, who today choose between "users write with their own wallet" (linkable) and "we write
+everything from our server wallet" (users lose ownership, and the server becomes a single point of
+control).
+
+## Expiry is not erasure
+
+Arkiv entities expire, which removes them from queries. It does not remove them from history.
+We measured this on Tiramisu: after a record expired, `getEntity` and normal queries no longer
+returned it, but
+
+- a query at an earlier block (`atBlock`) still returned it with its payload, and
+- the payload bytes were readable in the creating transaction's calldata.
+
+Short lifetimes are therefore not a privacy tool. Content that must stay private has to be
+encrypted before it is written. See [encrypted payloads](/guides/private-payloads).
+
+## What a fix has to keep
+
+Hiding records is easy if users give up ownership. The goal is harder:
+
+1. **Unlinkable:** nobody can tell which records belong to the same person.
+2. **Still owned:** each record is owned by a key only its user controls.
+3. **Findable:** the user can find all their records again, from any device.
+4. **Provable:** the user can prove one record is theirs when they choose to.
+5. **Open:** no single company runs the privacy layer.
+
+[One-time owners](/concepts/one-time-owners) and [relayers](/concepts/relayers-and-batching) are
+how Arkognito meets all five.

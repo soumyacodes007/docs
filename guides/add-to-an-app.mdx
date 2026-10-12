@@ -1,0 +1,146 @@
+---
+title: "Add Arkognito to an app"
+description: "Make an Arkiv app's writes unlinkable with the private client."
+keywords:
+  - "createPrivateClient"
+  - "Arkiv SDK"
+  - "private writes"
+---
+
+The private client replaces `createEntity` from `@arkiv-network/sdk`. It takes the same
+parameters, writes through relayers instead of the user's wallet, and returns the entity key and
+the one-time owner.
+
+## Install
+
+```bash
+npm install arkognito @arkiv-network/sdk@0.8.1 viem
+```
+
+`@arkiv-network/sdk` 0.8.1 and `viem` are peer dependencies.
+
+<Note>
+  Until the package is on npm, build it from the repository: clone
+  [Arkognito](https://github.com/soumyacodes007/Arkognito), run `npm ci && npm run build`, then
+  `npm pack` in `packages/sdk` and install the `.tgz`.
+</Note>
+
+## Create the client
+
+<Tabs>
+<Tab title="Browser (MetaMask)">
+
+```ts
+import { createWalletClient, custom } from "viem"
+import { tiramisu } from "@arkiv-network/sdk/chains"
+import { createPrivateClient } from "arkognito"
+
+const [account] = await window.ethereum.request({ method: "eth_requestAccounts" })
+const wallet = createWalletClient({ chain: tiramisu, transport: custom(window.ethereum), account })
+
+const ark = await createPrivateClient({ app: "my-app", wallet })
+```
+
+The wallet signs one message when the client is created (twice, to check the signature is stable).
+In a browser the derived keys live in a Web Worker; see
+[bundler requirements](#bundler-requirements).
+
+</Tab>
+<Tab title="Node">
+
+```ts
+import { createWalletClient, http } from "viem"
+import { privateKeyToAccount } from "viem/accounts"
+import { tiramisu } from "@arkiv-network/sdk/chains"
+import { createPrivateClient } from "arkognito"
+
+const wallet = createWalletClient({
+  chain: tiramisu,
+  transport: http(),
+  account: privateKeyToAccount(process.env.USER_KEY as `0x${string}`),
+})
+
+const ark = await createPrivateClient({
+  app: "my-app",
+  wallet,
+  relayers: ["https://relay-1.example.com", "https://relay-2.example.com"],
+})
+```
+
+</Tab>
+</Tabs>
+
+`wallet` can be a viem wallet client or the Arkiv SDK's own `createWalletClient`. Smart-contract
+wallets are not supported in this version.
+
+## Write a record
+
+```ts
+import { ExpirationTime, jsonToPayload } from "@arkiv-network/sdk"
+
+const { entityKey, owner, batchSize, warnings } = await ark.createEntity({
+  payload: jsonToPayload({ medicine: "paracetamol", inStock: true }),
+  contentType: "application/json",
+  attributes: { type: "stock-report", district: "pune" },
+  expires: ExpirationTime.fromDays(1),
+})
+```
+
+| Field | Meaning |
+| --- | --- |
+| `entityKey` | The Arkiv entity key of the new record |
+| `owner` | The one-time address that owns it. Different for every record. |
+| `batchSize` | How many records shared the batch, yours included: the anonymity set it landed in |
+| `recovered` | `true` when the relayer failed to answer but the record had landed (nothing was written twice) |
+| `warnings` | Fingerprinting warnings, see [fingerprinting](/concepts/fingerprinting) |
+
+A write takes about 25–30 seconds on a busy relayer and up to about 90 seconds on a quiet one with
+default settings. That wait is what hides you among other users. Show a "saving privately" state
+instead of a blocking spinner.
+
+## Read your records back
+
+```ts
+const mine = await ark.myEntities({ where: { type: "stock-report" } })
+for (const r of mine) console.log(r.key, r.toJson())
+```
+
+`myEntities()` never asks the network about your addresses. See
+[reading records](/guides/read-records).
+
+## Options you will likely set
+
+```ts
+const ark = await createPrivateClient({
+  app: "my-app",               // namespace for key derivation and the default project attribute
+  wallet,
+  relayers: ["https://relay-1.example.com"], // omit to discover live relayers on Arkiv
+  minAnonymity: 5,             // never land in a batch smaller than 5 (fail instead)
+  ohttpRelay: "https://ohttp.example.org", // hide your IP from relayers
+  strict: true,                // refuse writes that check() flags
+})
+```
+
+Every option is in the [SDK reference](/reference/sdk#createprivateclient).
+
+## Rules for attributes and payloads
+
+- **Lowercase attribute names.** The Arkiv node rejects uppercase (`minbatch`, not `minBatch`).
+  The client refuses such names before anything is sent.
+- **Coarse values.** Exact timestamps, precise coordinates, postal codes and free text identify
+  people even behind a fresh owner. Use `coarse.day()`, `coarse.geo()` and friends.
+- **Lifetimes are rounded up** to 1 hour, 1 day, 7 days, 30 days or 90 days. Longer is refused.
+- **Payloads are padded** to 512 B, 1 KB, 4 KB or 16 KB. The largest record is 16 KB.
+- **Records are create-only.** One-time owners hold no gas, so they cannot patch, extend or delete.
+  Write a new record to update, and let old ones expire.
+- **Private content** belongs in an encrypted payload: `encrypt: true`. Expiry hides a record from
+  queries, not from transaction history.
+
+## Bundler requirements
+
+In browsers the SDK starts its key worker with `new Worker(new URL("./vault.worker.js",
+import.meta.url))`. Vite, webpack 5 and Rollup with a worker plugin bundle this automatically. If
+the worker cannot start, the client logs a warning and keeps keys in the page instead; you can also
+force that with `isolateKeys: false`.
+
+Do not load third-party analytics, session replay or error reporters on pages that use Arkognito.

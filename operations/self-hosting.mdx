@@ -1,0 +1,160 @@
+---
+title: "Self-hosting"
+description: "Run the whole Arkognito network yourself: relayers, token issuer and OHTTP relay."
+keywords:
+  - "self-host"
+  - "Docker Compose"
+  - "Arkognito relayer"
+---
+
+Arkognito needs no hosted service from us. Every piece is open source, and all shared state lives
+on Arkiv, so there is no database to run. Run the whole network, or run one piece and use other
+people's for the rest.
+
+| Service | Does | Sees | Needs |
+| --- | --- | --- | --- |
+| **Relayer** | Batches records, writes them to Arkiv, hands each to its one-time owner, pays gas | Records and one-time owners; IPs unless clients use OHTTP | A funded Tiramisu wallet |
+| **Token issuer** (optional, inside a relayer) | Hands out daily blind rate-limit tokens | Which wallet took how many tokens | Its own funded wallet and a 32-byte seed |
+| **OHTTP relay** (optional) | Forwards encrypted requests so relayers never see client IPs | Client IPs, never contents | Nothing on chain |
+
+{/* DIAGRAM: deployment
+    File: /images/diagrams/deployment.png
+    Show: docker compose stack: relay-1 (relayer + issuer, volume /data) :8787, relay-2 :8788,
+    ohttp-relay :8790, optional Caddy in front for HTTPS; all talk to Arkiv Tiramisu RPC; clients
+    discover relayers through heartbeat entities on Arkiv. */}
+
+## Docker Compose
+
+One image serves every role; the `ROLE` variable picks what each container runs.
+
+<Steps>
+<Step title="Clone and install">
+
+```bash
+git clone https://github.com/soumyacodes007/Arkognito.git
+cd Arkognito
+npm ci
+```
+
+</Step>
+<Step title="Create wallets">
+
+```bash
+npm run setup
+```
+
+Creates the relay-1, relay-2 and issuer wallets and the issuer seed in `.env`, and prints each
+address and balance. It never prints a key and never replaces a value that is already set. Fund
+the three addresses from the [faucet](https://hub.arkiv.network/faucet).
+
+</Step>
+<Step title="Start the network">
+
+```bash
+OHTTP_ALLOW_LOCAL=on docker compose up -d
+```
+
+| Container | Port | Role |
+| --- | --- | --- |
+| `relay-1` | 8787 | Relayer + token issuer, quota file on a volume |
+| `relay-2` | 8788 | Relayer that accepts relay-1's tokens |
+| `ohttp-relay` | 8790 | OHTTP relay |
+
+`OHTTP_ALLOW_LOCAL=on` lets the OHTTP relay forward to `http://localhost` relayers. Use it only
+locally.
+
+</Step>
+<Step title="Check health">
+
+```bash
+curl localhost:8787/healthz
+curl localhost:8788/healthz
+curl localhost:8790/healthz
+```
+
+Each returns `"ok": true`. The relayers also report their queue, batches written, balance and
+heartbeat entity.
+
+</Step>
+</Steps>
+
+Point an app at it:
+
+```ts
+const ark = await createPrivateClient({
+  app: "my-app",
+  wallet,
+  relayers: ["http://localhost:8787", "http://localhost:8788"],
+})
+```
+
+## Public deployment with HTTPS
+
+Browsers and OHTTP relays only use **https** relayers on public hosts.
+
+1. Point DNS for your hostnames (for example `relay-1.example.com`, `relay-2.example.com`) at the
+   machine.
+2. Put those hostnames in `deploy/Caddyfile`.
+3. Set the public URLs in `.env`:
+
+   ```env .env
+   RELAY_1_PUBLIC_URL=https://relay-1.example.com
+   RELAY_2_PUBLIC_URL=https://relay-2.example.com
+   ```
+
+4. Start with the TLS overlay:
+
+   ```bash
+   docker compose -f docker-compose.yml -f deploy/docker-compose.tls.yml up -d
+   ```
+
+Caddy obtains certificates automatically, and the services stop exposing ports directly.
+
+<Warning>
+  Run the OHTTP relay under a **different operator** than the relayers. If the same people run
+  both, OHTTP protects nothing.
+</Warning>
+
+## Without Docker
+
+Node.js 22 or newer:
+
+```bash
+npm ci && npm run build
+npm run setup
+npm run relayer        # one relayer on :8787
+npm run dev:relayers   # or: two relayers + issuer on :8787 and :8788
+npm run ohttp-relay    # OHTTP relay on :8790
+```
+
+Use a process manager (systemd, pm2) to restart them on failure. They keep no local state except
+the optional issuer quota file.
+
+## Platforms (Railway, Fly, Render)
+
+Every service is the same `Dockerfile`; create one service per role and set `ROLE`. The repository's
+`railway.json` configures the Dockerfile build, the `/healthz` health check and restart-always. The
+[Railway + Vercel guide](/operations/deploy-railway-vercel) has the exact variables.
+
+## Run only part of it
+
+- **Only a relayer, no tokens:** `REQUIRE_TOKENS=off`. A per-address rate limit protects your gas.
+- **A relayer that accepts another team's tokens:** `REQUIRE_TOKENS=on`, `ISSUER_WALLET_ADDRESS`
+  and `ISSUER_URL` of their issuer.
+- **Only an OHTTP relay** for someone else's relayers: `ROLE=ohttp-relay`, nothing else to set.
+
+## Operating it
+
+- **Gas.** Every batch and every heartbeat costs gas. Across all our test runs (several hundred
+  records plus heartbeats) one relayer spent about 0.1 GLM. Watch `balanceGlm` on `/healthz`; the
+  relayer logs `LOW BALANCE` below `LOW_BALANCE_GLM`. The faucet gives 0.1 GLM a day per wallet.
+- **One wallet, one process.** Never run two processes on the same relayer wallet: their
+  transactions collide.
+- **Restarts are safe.** Queued requests are lost and clients retry elsewhere; a record that was
+  already written is recognised by its client, so nothing is written twice. The heartbeat and the
+  OHTTP gateway key survive restarts.
+- **Issuer keys rotate daily** and derive from `ISSUER_RSA_SEED`. Never change the seed during a
+  day: clients would see two keys and refuse the issuer.
+- **Logs** contain batch summaries only, never IPs or request bodies. Keep your proxy the same.
+
+All variables are in the [configuration reference](/reference/configuration).

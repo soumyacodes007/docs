@@ -1,0 +1,70 @@
+---
+title: "Notes on Arkiv"
+description: "Arkiv behaviours that shaped Arkognito's design, with reproductions and the workaround for each."
+keywords:
+  - "Arkiv SDK"
+  - "Arkiv friction"
+  - "Tiramisu"
+---
+
+Building Arkognito on `@arkiv-network/sdk` 0.8.1 and the Tiramisu testnet surfaced several
+behaviours every Arkiv builder should know. Each has a reproduction script in the repository's
+[`arkiv/friction.md`](https://github.com/soumyacodes007/Arkognito/blob/main/arkiv/friction.md).
+
+## Expiry hides an entity but does not erase it
+
+After an entity expires, `getEntity` throws and normal queries return nothing. But a query at an
+earlier block (`.atBlock(<creation block>)`) still returns it with its payload, and the payload
+bytes are readable in the creating transaction's calldata.
+
+**Consequence:** expiry is not a privacy tool. **In Arkognito:** private content uses
+`encrypt: true`.
+
+## Uppercase attribute names are rejected by the node
+
+The SDK's `isValidAttributeName("minBatch")` returns `true` and the SDK sends it, but the node
+reverts: *an attribute name holds "B" (0x42) at byte 3, which is outside the name charset ("A"-"Z",
+"a"-"z", …)*. The message lists "A"-"Z" as allowed while rejecting it. In an `executeBatch`, one bad
+name reverts every operation in the batch.
+
+**In Arkognito:** the client and the relayer both enforce `^[a-z][a-z0-9._-]*$` before a record can
+join a batch, and a failed batch is split and retried so one bad record cannot sink the others.
+
+## The SDK's page iterator breaks when a block lands mid-page
+
+Arkiv cursors are tied to the block they were read at. The SDK's async iterator reads page 1 at the
+head and page 2 at the new head, so a page-through over more than 200 entities fails
+intermittently with *cursor belongs to a different query, block or select*.
+
+**In Arkognito:** every page-through is pinned with `.atBlock(await client.getBlockNumber())`.
+
+## The SDK refuses `$createdAt` filters the node supports
+
+`eq("$createdAt", u64(n))` throws in the SDK (*carries no index, so it cannot be filtered on*),
+while the same filter sent as a raw query works.
+
+**In Arkognito:** whole-batch fetches, which let a client read its record without naming it, use
+`client.query("… AND $createdAt = u64(<block>) AND $creator = addr(<relayer>)")`.
+
+## Stale key predictions fail with a misleading message
+
+`predictEntityKeys` is only valid while nothing else from that owner is in flight. A batch built
+on a stale prediction fails with *no entity 0x… — it may have been deleted, or have expired*, which
+points at the wrong cause. The revert is atomic.
+
+**In Arkognito:** one writer per relayer wallet, predict immediately before sending, and re-predict
+on this error.
+
+## The wallet client's type hides signing methods
+
+The SDK's `createWalletClient` extends viem's wallet actions at runtime, but its declared type omits
+`signTypedData` and `signMessage`, so TypeScript rejects code that signs with it.
+
+**In Arkognito:** any object with an `account` is accepted; signing methods are checked at runtime.
+
+## Smaller notes
+
+- `npm install @arkiv-network/sdk@0.8.1` works; some docs still say to use the `@dev` tag.
+- The Tiramisu explorer is `https://indexer.tiramisu.db-chain.testnet.arkiv.network`.
+- `executeBatch` applies creates before ownership changes, which is what lets a relayer create a
+  record and hand it to its one-time owner in one transaction.

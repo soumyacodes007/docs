@@ -1,47 +1,129 @@
 ---
 title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+description: "Run a relayer on Arkiv Tiramisu and write your first private record."
+sidebarTitle: "Quickstart"
+keywords:
+  - "Arkognito quickstart"
+  - "Arkiv Tiramisu"
+  - "private record"
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
+In this tutorial you run a relayer locally against the Arkiv Tiramisu testnet, write one record
+through it with a throwaway wallet, find the record again, and confirm that an owner query on the
+wallet returns nothing.
 
 ## Prerequisites
 
-Before you begin, you must have:
+- Node.js 22 or newer and npm
+- Git
+- One Tiramisu testnet wallet with a little GLM for the relayer to pay gas. `npm run setup` creates
+  it; fund it from the [Arkiv faucet](https://hub.arkiv.network/faucet).
 
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+The user's wallet in this tutorial is a throwaway key. It needs no funds: the relayer pays for
+every write.
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+<Step title="Clone and build">
 
-    ```bash
-    npm install your-package
-    ```
-  </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
+```bash
+git clone https://github.com/soumyacodes007/Arkognito.git
+cd Arkognito
+npm ci
+npm run build
+```
 
-    ```bash
-    your-cli init
-    ```
-  </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+</Step>
+<Step title="Create the relayer wallet">
 
-    ```bash
-    your-cli start
-    ```
-  </Step>
+```bash
+npm run setup
+```
+
+This writes new wallet keys and an issuer seed to `.env` (never printed) and shows each wallet's
+address and balance:
+
+```text
+created: relay-1, relay-2, issuer, issuer seed (keys are in .env only)
+
+Fund each wallet with Tiramisu GLM: https://hub.arkiv.network/faucet
+
+relay-1  0xE862…812d  0 GLM  (relayer that also runs the token issuer's HTTP API)  <- needs funds
+```
+
+Fund the `relay-1` address from the faucet. The quickstart only uses that one.
+
+</Step>
+<Step title="Start a relayer">
+
+Add two lines to `.env`:
+
+```env .env
+REQUIRE_TOKENS=off
+MAX_WAIT_MS=15000
+```
+
+Then start it:
+
+```bash
+npm run relayer
+```
+
+```text
+[relay] listening on :8787 as 0xE862…812d (k=5, maxWait=15000ms, ohttp=true, evil=none)
+```
+
+`MAX_WAIT_MS=15000` makes the relayer write a batch after 15 seconds even if fewer than 5 records
+are waiting (the default is 60 seconds). Rate-limit tokens are off for the quickstart. With no
+`RELAYER_PRIVATE_KEY` set, the relayer uses `RELAYER_1_PRIVATE_KEY` from `npm run setup`.
+
+</Step>
+<Step title="Write a private record">
+
+In a second terminal:
+
+```bash
+node examples/quickstart.mjs
+```
+
+```text
+writing one record for app "quickstart-4afo9u" through http://localhost:8787 (it waits for a batch)…
+written: 0x334c2b9f…bb805
+  owner 0x0C9E2D03…68C5c (one-time), batch of 1
+myEntities(): 1 record(s), first says {"hello":"arkiv"}
+owner query on your wallet: 0 record(s)
+quickstart OK
+```
+
+The record is owned by a one-time address, `myEntities()` finds it from the wallet alone, and an
+owner query on the wallet finds nothing.
+
+</Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## What happened
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+{/* DIAGRAM: quickstart-flow
+    File: /images/diagrams/quickstart-flow.png
+    Show: quickstart.mjs (wallet signs once -> root key -> one-time owner S + tag) -> POST to relayer
+    -> relayer waits for a batch -> one Arkiv transaction (create + transfer to S) -> client reads the
+    batch back and verifies the signature. */}
+
+1. The script's wallet signed one EIP-712 message. The SDK derived a private root key from it.
+2. For this record the SDK made a fresh one-time owner `S` and an encrypted tag that only the
+   root key can open, then signed the record with `S`.
+3. The relayer waited for a batch, then created the record and transferred it to `S` in the same
+   transaction. The record's `$creator` is the relayer.
+4. The SDK read the whole batch back and checked the signature, so a relayer that edits a record
+   or hands it to someone else is caught.
+5. `myEntities()` downloaded the app's tags and opened the ones that are yours locally.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Add it to your app" icon="code" href="/guides/add-to-an-app">
+    The private client takes the same parameters as Arkiv's `createEntity`.
+  </Card>
+  <Card title="Run the full network" icon="server" href="/operations/self-hosting">
+    Two relayers, rate-limit tokens and an OHTTP relay with Docker Compose.
+  </Card>
+</CardGroup>

@@ -1,0 +1,93 @@
+---
+title: "Relayers and batching"
+description: "Why a shared relayer writes every record, and how batches hide who wrote what."
+keywords:
+  - "relayer"
+  - "batching"
+  - "anonymity set"
+  - "executeBatch"
+---
+
+## Why a relayer
+
+If a user's wallet created a record, `$creator` would name the wallet forever. So a relayer creates
+every record and, **in the same transaction**, transfers ownership to the record's one-time owner
+`S`. On chain, every record looks the same: `$creator` is a relayer shared by everyone, `$owner` is
+an address used once.
+
+{/* DIAGRAM: write-path
+    File: /images/diagrams/write-path.png
+    Show: several users' clients -> relayer queue -> (wait for k records or max wait) -> shuffle ->
+    one executeBatch: creates [r1..rn] then ownership transfers [r1->S1 .. rn->Sn] -> Arkiv.
+    Each client then reads the whole batch back and verifies its record. */}
+
+The relayer also pays the gas, so users need no tokens or GLM to write.
+
+## One transaction per batch
+
+Arkiv's `executeBatch` applies creates before ownership changes inside one transaction. The relayer:
+
+1. predicts the keys its next creates will receive (`predictEntityKeys`),
+2. sends one transaction: all creates, then each predicted key transferred to its owner,
+3. if a prediction went stale, predicts again; if anything else fails, splits the batch in halves
+   and retries each, so one bad record cannot sink everyone else's.
+
+Each relayer wallet has exactly one writer. Two processes on one wallet would invalidate each
+other's predictions.
+
+## Hiding in the batch
+
+Timing is the obvious leak: "a request arrived, two seconds later a record appeared". Batching
+removes it:
+
+- the relayer waits until **k** records are queued (default 5) or the oldest has waited **max
+  wait** (default 60 s), and never writes more often than every 5 blocks;
+- it **shuffles** the batch, so position means nothing;
+- the client waits a **random 0–20 s** before sending;
+- each client keeps **one write in flight**, so a user's own records never share a batch, even
+  across browser tabs.
+
+Every record in a batch has the same creator, the same block, a padded size and a bucketed
+lifetime. An observer cannot tell which came from whom.
+
+## Small batches
+
+In a quiet period, the max wait can expire with only one or two records queued. By default the
+relayer writes anyway and tells the client the batch size. A client that would rather wait can set
+`minAnonymity`: the relayer then holds the record until a batch of at least that size forms, up to
+`maxHoldMs`, and fails it rather than write it in a smaller batch.
+
+```ts
+const ark = await createPrivateClient({ app: "my-app", wallet, minAnonymity: 5 })
+```
+
+## Trusting nothing the relayer says
+
+A relayer could edit a record, keep it, or hand it to its own address. The client checks:
+
+1. it reads the **whole batch** back from Arkiv (never just its own key),
+2. it verifies that the record's envelope signature recovers to its one-time owner,
+3. on any mismatch it marks the relayer bad and retries through the next one.
+
+A relayer that drops or delays requests is caught by a timeout that only runs while the queue is
+not moving. A relayer that wrote a record and then crashed before answering does not cause a
+duplicate: before retrying elsewhere, the client looks for its own tag on Arkiv.
+
+## Discovery
+
+Each relayer keeps an expiring heartbeat entity on Arkiv (`arkognito.relayer`, 150 blocks, renewed
+every 2 minutes) with its URL, batch size, whether it requires tokens, and its OHTTP gateway key.
+A relayer that dies drops out on its own. Clients trust only each heartbeat's `$creator` as that
+relayer's address.
+
+## Latency
+
+| Stage | Default |
+| --- | --- |
+| Client random delay | 0–20 s |
+| Waiting for a batch | until 5 records, at most 60 s |
+| Writing to Arkiv | 5–10 s |
+| Reading the batch back | 1–2 s |
+
+Measured: about 25–30 s per write on a busy relayer, up to about 90 s on a quiet one. Operators can
+shorten the wait (`MAX_WAIT_MS`) at the cost of smaller anonymity sets.

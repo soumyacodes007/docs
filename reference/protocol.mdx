@@ -1,0 +1,222 @@
+---
+title: "Protocol"
+description: "Byte-level description of Arkognito keys, tags, envelopes, Oblivious HTTP, proofs and tokens: enough to build a compatible client or relayer."
+keywords:
+  - "Arkognito protocol"
+  - "specification"
+  - "HKDF"
+  - "RFC 9458"
+  - "RFC 9474"
+---
+
+This page describes protocol version 1 in enough detail to write a compatible client or relayer.
+The reference implementation is the `arkognito` SDK and the relayer in the
+[repository](https://github.com/soumyacodes007/Arkognito); the canonical text is
+[`spec/SPEC.md`](https://github.com/soumyacodes007/Arkognito/blob/main/spec/SPEC.md).
+
+**Network:** Arkiv Tiramisu, chain id `7738577`, entity registry
+`0x4400000000000000000000000000000000000044`, block time 2 s. Arkognito's own entities carry
+`project = "arkognito-7f3k"`. Attribute names match `^[a-z][a-z0-9._-]*$`: the node rejects
+uppercase.
+
+## Keys
+
+The wallet signs this EIP-712 message once per app:
+
+```text
+domain:  { name: "arkognito", version: "1", chainId: 7738577 }
+types:   ArkognitoKey { purpose: string, app: string, chainId: uint256 }
+message: { purpose: "arkognito key v1", app: <app>, chainId: 7738577 }
+```
+
+The client signs twice and refuses the wallet if the signatures differ, and refuses accounts that
+have code (smart-contract wallets).
+
+```text
+root = HKDF-SHA256(ikm = signature (65 bytes), salt = none, info = "arkognito/root/v1/" + app, L = 32)
+```
+
+Random-root mode: `root` is 32 random bytes; the recovery code is `"arkognito1-" + hex(root)`.
+
+A **key reference** is a `kind` (record or scope) and a 15-byte `id`:
+
+- a record gets a fresh random `id`;
+- a scope's `id` is `sha256("arkognito/scope/" + name)[0..15]`.
+
+```text
+okm = HKDF-SHA256(ikm = root, salt = none, info = kind + "/" + hex(id), L = 48)
+k   = (big-endian integer of okm  mod  (n - 1)) + 1          n = secp256k1 group order
+S   = address(k)
+```
+
+## Tags
+
+Every record carries its key reference, encrypted, in the attribute `vtag`:
+
+```text
+tagKey = HKDF-SHA256(root, info = "arkognito/tag/v1", L = 32)
+plain  = kind byte (0 = record, 1 = scope) || id                            16 bytes
+vtag   = base64url(iv || AES-256-GCM(tagKey, iv, plain, aad = "arkognito/tag/v1|" + app))
+```
+
+`iv` is 12 random bytes. A tag is always 44 bytes (59 characters).
+
+## Payload encryption
+
+Optional, per record:
+
+```text
+dataKey    = HKDF-SHA256(root, info = "arkognito/data/v1/" + kind + "/" + hex(id), L = 32)
+ciphertext = iv (12 bytes) || AES-256-GCM(dataKey, iv, payload)
+```
+
+## Envelope
+
+The entity payload is UTF-8 JSON with keys in this order:
+
+```json
+{ "v": 1, "app": "<app>", "ct": "<app content type>", "exp": 86400, "enc": 0, "data": "<base64>", "sig": "0x…", "pad": "000…" }
+```
+
+- `exp`: lifetime in seconds, rounded **up** to `3600`, `86400`, `604800`, `2592000` or `7776000`.
+  Longer is refused.
+- `enc`: `1` when `data` is ciphertext.
+- `sig`: `S`'s EIP-191 signature (`personal_sign` of the raw 32 bytes) over:
+
+```text
+digest = keccak256(abi.encode(
+  string "arkognito/envelope/v1", string app, string ct, uint64 exp, uint8 enc, string data,
+  string canonicalAttributes))
+```
+
+`canonicalAttributes` is `JSON.stringify` of `[name, type, value]` triples sorted by name. Values are
+normalised to their Arkiv type (bare number to `i32`, bigint to `u256`, string to `str`, boolean
+to `bool`) and written as strings; `addr`, `key` and `bytes32` values are lowercased. The attributes
+signed are exactly those written on chain, including `project` and `vtag`.
+
+- `pad`: zeros that bring the UTF-8 length of the whole JSON to exactly 512, 1024, 4096 or 16384
+  bytes. The bucket is chosen as if the payload were encrypted (28 bytes larger), so encrypted and
+  plain records of the same input are the same size. Larger records are refused.
+
+The entity: `contentType = "application/json"`, attributes are the app's plus `project` and `vtag`,
+lifetime `exp` seconds.
+
+### Verifying a record
+
+1. The payload parses as a v1 envelope (and `app` matches, when known).
+2. `recover(sig, digest(envelope, on-chain attributes)) == $owner`.
+3. `|($expiresAt - $createdAt) - exp / 2| <= 30` blocks.
+4. Optionally, `$creator` is a known relayer.
+
+## Finding records
+
+1. List the app pinned to one block: `project = str(<project>)`, selecting key, owner, creator,
+   createdAt and attributes, every page at the same `atBlock`.
+2. Trial-decrypt every `vtag`. A tag that opens names a key reference whose address must equal the
+   record's owner.
+3. Fetch full records for whole batches only, with
+   `project = … AND $createdAt = u64(<block>) AND $creator = addr(<relayer>)`, for each batch that
+   holds one of yours plus 2 random cover batches. Verify each record.
+
+After writing, a client confirms its record the same way. If a relayer does not answer, the client
+looks for its own `vtag` in a fresh listing before retrying elsewhere.
+
+## Relayer behaviour
+
+- **Validation** before queueing: see [POST /v1/records](/reference/relayer-api#post-v1records).
+- **Batching:** a batch is up to `maxBatch` queued records, minus any whose `minAnonymity` exceeds
+  the batch size (repeated until stable). Flush when it holds `minBatch` records or its oldest has
+  waited `maxWaitMs`, and never before `lastFlushBlock + minIntervalBlocks`. A record whose hold
+  expires without a large enough batch fails unwritten.
+- **Shuffling:** records (Fisher–Yates, cryptographic randomness), and spent markers separately.
+- **Writing:** `predictEntityKeys(relayer, n + m)`, then one `executeBatch`: creates
+  `[records…, markers…]` with the predicted salts, and ownership changes giving record `i` to its
+  owner. One writer per wallet. Stale prediction: predict again (up to 3 times). Any other failure:
+  split the batch in halves and retry each.
+- **Client:** one write in flight per user and app (across tabs with Web Locks); random 0–20 s delay;
+  give up on a relayer when its queue position has not improved for
+  `3 × (maxWaitMs + 2 s × minIntervalBlocks) + 30 s` (or `maxHoldMs`, if longer).
+
+### Discovery
+
+```text
+project = "arkognito-7f3k", type = "arkognito.relayer", url, version, minbatch (i32), tokens (bool),
+ohttpkey (bytes32, optional); lifetime 150 blocks, extended every 2 minutes
+```
+
+Trust only the heartbeat's `$creator` as the relayer's address.
+
+## Oblivious HTTP
+
+RFC 9458 §4 encapsulation with HPKE base mode: KEM X25519-HKDF-SHA256 (`0x0020`), KDF HKDF-SHA256
+(`0x0001`), AEAD AES-128-GCM (`0x0001`), key id `1`. The inner message is JSON (method, path,
+body / status, body) rather than Binary HTTP, so the labels are Arkognito's own:
+
+```text
+request:  hdr  = keyId || kemId || kdfId || aeadId
+          info = "message/arkognito-ohttp request" || 0x00 || hdr
+          enc, ct = SealBase(gatewayKey, info, aad = "", inner request)
+          sent: hdr || enc || ct
+response: secret = context.Export("message/arkognito-ohttp response", 16)
+          nonce  = 16 random bytes
+          prk    = HKDF-Extract(salt = enc || nonce, secret)
+          key    = HKDF-Expand(prk, "key", 16); aeadNonce = HKDF-Expand(prk, "nonce", 12)
+          sent: nonce || AES-128-GCM(key, aeadNonce, inner response)
+```
+
+- Client to relay: `POST <relay>/ohttp` with header `x-arkognito-target: <relayer url>`.
+- Relay to relayer: `POST <relayer>/v1/ohttp` with the body only.
+- The relay forwards only to https targets on public hosts whose live heartbeat publishes an
+  `ohttpkey` and which answer `/v1/info` with the heartbeat creator's address and that key; no
+  redirects.
+- Clients read gateway keys from heartbeats, never from the relay. For a URL claimed by several
+  heartbeats, the client accepts the key whose decrypted `/v1/info` names that heartbeat's creator.
+- A relayer derives its gateway key from its own private key (HKDF, label `arkognito/ohttp/v1`).
+
+## Ownership proof
+
+```text
+domain:  { name: "arkognito", version: "1", chainId }
+types:   OwnershipProof { entityKey: bytes32, challenge: string, verifier: string, expiresAt: uint64 }
+```
+
+Signed by `S`. The verifier checks the challenge and its own name, that `expiresAt` (unix seconds)
+has not passed, that the signature recovers to the claimed owner, and that the entity's `$owner`
+on chain is that address. Derived keys sign only envelopes and ownership proofs.
+
+## Rate-limit tokens
+
+Scheme: RSA blind signatures, `RSABSSA-SHA384-PSS-Randomized` (RFC 9474), 2048-bit keys.
+
+- **Days:** `epoch = floor(unix_ms / 86400000)`. Previous-day tokens are accepted for the first hour
+  of a new day.
+- **Issuer key:** one per app per epoch, published by the issuer's wallet as `arkognito.issuerKey`
+  with attributes `app` and `epoch` (i32) and payload `spki` (base64 SubjectPublicKeyInfo) and
+  `scheme`. Read from Arkiv only, filtered by the issuer as `$creator`. Two keys for one app and
+  epoch mean equivocation: refuse the issuer.
+- **Issuance:** each token message is 32 random bytes, prepared as `32 random bytes || message`
+  (64 bytes) and blinded. The wallet signs (`personal_sign`):
+
+```text
+arkognito tokens v1
+app: <app>
+day: <epoch>
+count: <n>
+request: <0x sha256 of the blinded list joined by ','>
+ts: <ts>
+```
+
+  The issuer checks the signature, that `ts` is within 5 minutes, and the quota (per wallet per app
+  per day, or per attestation code), then returns the blind signatures.
+- **Client timing:** fetch tokens at session start, spend the oldest first, never spend a token
+  younger than 60 s.
+- **Redemption:** `token = { epoch, nonce: 0x<prepared 64 bytes>, signature: base64 }`. The relayer
+  verifies it, computes `tokenid = sha256(prepared)`, refuses it if an `arkognito.spent` entity with
+  that id exists or it is in flight, and writes the marker (attributes `app`, `epoch`, `tokenid`
+  (bytes32); empty payload; lifetime until the end of epoch + 1 day) in the same transaction as the
+  record. It checks again right before writing and periodically scans for ids recorded twice.
+
+## Never on Arkiv
+
+The wallet signature, the root key, any derived key, the link between a wallet and its one-time
+owners, issuer private keys, relayer or relay logs, quota records and attestation codes.

@@ -1,0 +1,50 @@
+---
+title: "Finding your records"
+description: "How a user finds every record they own without telling anyone which ones."
+keywords:
+  - "private reads"
+  - "trial decryption"
+  - "myEntities"
+---
+
+The obvious way to find your records, "give me everything owned by S1, S2, S3…", would tell the RPC
+provider your full set of addresses and undo everything. Arkognito never asks about specific
+records or addresses.
+
+{/* DIAGRAM: read-path
+    File: /images/diagrams/read-path.png
+    Show: 1) download the app's list (keys, owners, tags; no payloads) - same for every user;
+    2) open tags locally in the key worker -> "these are mine";
+    3) fetch full records for those batches + 2 random cover batches; 4) verify signatures. */}
+
+## Three steps
+
+1. **List the app.** Download every record of the app as of one block: keys, owners, creators,
+   creation blocks and attributes, no payloads. Every user of the app downloads the same list.
+2. **Open tags locally.** Try to decrypt each record's `vtag`. Only tags made by your root key
+   open; each names one of your keys, whose address must equal the record's owner.
+3. **Fetch by batch.** Download full records only for the batches that hold one of yours, plus two
+   other batches at random, then verify each signature.
+
+The RPC provider learns that you use the app, and that one of a few batches interests you. It
+never learns which record, or which addresses, are yours.
+
+## After writing
+
+The client confirms a new record the same way: it fetches the whole batch the relayer named, never
+the single key. If a relayer fails to answer, the client looks for its own tag in a fresh listing
+before trying another relayer, so a relayer that wrote the record and then crashed causes no
+duplicate.
+
+## Cost
+
+The listing grows with the number of records in the app: about 1–3 seconds for a few hundred
+records in our tests. Large apps will want an index service in a later version.
+
+## Implementation notes
+
+- Listings are pinned to one block with `atBlock`, because Arkiv cursors are tied to the block they
+  were read at.
+- Batches are fetched with a `$createdAt = u64(block) AND $creator = addr(relayer)` query. The node
+  supports this filter even though the Arkiv SDK's query builder refuses it, so the SDK sends it as
+  a raw query.

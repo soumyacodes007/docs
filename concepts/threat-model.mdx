@@ -1,0 +1,50 @@
+---
+title: "Threat model"
+description: "Who can learn what, what Arkognito protects, and the limits we state plainly."
+keywords:
+  - "threat model"
+  - "privacy guarantees"
+  - "limitations"
+---
+
+## Who sees what
+
+| Party | Sees | Must not learn |
+| --- | --- | --- |
+| Anyone reading Arkiv | All records, owners, creators, batches, spent markers | Which records belong to the same person |
+| Relayer | Records, one-time owners, request times; IPs unless OHTTP is used | Which wallet sent which record |
+| Token issuer | Wallets and how many tokens each took | Which records those tokens paid for |
+| OHTTP relay | Client IPs and encrypted blobs | Request contents |
+| Arkiv RPC provider | Your IP and app-wide or batch-wide reads | Which records or addresses are yours |
+| The page running the SDK | The wallet, addresses, tags, signatures it asks for | The root key or any private key |
+
+We assume a relayer and the issuer may be run by the same team, and design for it.
+
+## What Arkognito protects
+
+- **Linking records to each other or to a wallet** from chain data: one-time owners, a shared
+  creator, shuffled padded batches, bucketed lifetimes.
+- **Relayer tampering:** signed envelopes, verified by the client after every write and by any reader.
+- **Relayer censorship or crashes:** failover, and duplicate-free recovery.
+- **Reads revealing ownership:** app-wide listings, local tag opening, batch-level fetches.
+- **Rate limits revealing identity:** blind tokens, key-consistency checks, timing separation.
+- **Network identity:** Oblivious HTTP, when used, with relayers verified through Arkiv.
+- **Key exposure in the browser:** keys in a Web Worker that only signs Arkognito-shaped requests.
+
+## Limits, stated plainly
+
+- **Relayer and OHTTP relay must not collude.** OHTTP protects IPs only if they are run by
+  different people. Without OHTTP, the relayer sees IPs.
+- **Anonymity is per batch.** In a quiet hour a batch can be small; use `minAnonymity` to refuse
+  small batches.
+- **Quotas limit wallets, not people,** unless the issuer requires attestation codes.
+- **A hostile frontend** can still ask the key worker for signatures and ownership proofs. Only use
+  Arkognito on pages you trust, with no third-party scripts.
+- **Content can identify people** regardless of owners. `check()` helps but cannot catch everything.
+- **Expiry does not erase history.** Use encryption for private content.
+- **Records are create-only.** One-time owners hold no gas.
+- **Smart-contract wallets** are not supported in this version.
+- **No outside audit yet.** The protocol is experimental and runs on testnet only.
+
+Every case, with its status and the test that shows it, is in the
+[edge-case register](/reference/edge-cases).

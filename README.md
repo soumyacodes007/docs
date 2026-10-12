@@ -1,55 +1,51 @@
-# Mintlify Starter Kit
+# Arkognito docs
 
-Use the starter kit to get your docs deployed and ready to customize.
+Documentation for [Arkognito](https://github.com/soumyacodes007/Arkognito): unlinkable ownership for
+[Arkiv](https://arkiv.network) apps. Records are owned by one-time addresses, written by relayers in
+shuffled batches, and found again with nothing but the user's wallet.
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
+Built with [Mintlify](https://mintlify.com).
 
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
+## Preview locally
 
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
-
-## AI-assisted writing
-
-Set up your AI coding tool to work with Mintlify:
+Needs Node 20 or later.
 
 ```bash
-npx skills add https://mintlify.com/docs
+npx mint dev
 ```
 
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
+Open `http://localhost:3000`. Check links before you push:
 
-See the [AI tools guides](/ai-tools) for tool-specific setup.
-
-## Development
-
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
-
-```
-npm i -g mint
+```bash
+npx mint broken-links
 ```
 
-Run the following command at the root of your documentation, where your `docs.json` is located:
+## Structure
 
-```
-mint dev
-```
+| Path | What |
+| --- | --- |
+| `docs.json` | Theme, navigation and tabs |
+| `index.mdx`, `quickstart.mdx` | Introduction and a first private record |
+| `guides/` | Task guides: add to an app, migrate from the Arkiv SDK, read records, proofs, private payloads, tokens, OHTTP |
+| `concepts/` | How it works: linkability, one-time owners, relayers and batching, envelopes, finding records, blind tokens, fingerprinting, threat model |
+| `operations/` | Self-hosting, Railway and Vercel, OHTTP relay, security, troubleshooting |
+| `reference/` | SDK, relayer API, configuration, entities, protocol, edge cases |
+| `architecture/` | Architecture overview, linkage experiment, notes on Arkiv |
+| `openapi.json` | Relayer and issuer API, rendered in the API Reference tab |
+| `images/diagrams/` | Diagram images |
+| `DIAGRAMS.md` | Every diagram placeholder still to draw |
+| `AGENTS.md` | Writing rules for people and coding agents |
 
-View your local preview at `http://localhost:3000`.
+## Diagrams
 
-## Publishing changes
+Diagram spots are MDX comment placeholders. [`DIAGRAMS.md`](DIAGRAMS.md) lists each one, its file
+name, the pages that use it and what it should show.
 
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
+## Publishing
 
-## Need help?
+Install the Mintlify GitHub app on this repository from the Mintlify dashboard. Pushes to `main`
+deploy automatically.
 
-### Troubleshooting
+## License
 
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
-
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+MIT

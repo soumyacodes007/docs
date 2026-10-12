@@ -1,0 +1,92 @@
+---
+title: "One-time owners"
+description: "How Arkognito derives a fresh owner for every record from a single wallet signature."
+keywords:
+  - "key derivation"
+  - "HKDF"
+  - "EIP-712"
+  - "stealth address"
+---
+
+Every Arkognito record is owned by a fresh address `S` that appears nowhere else. Only the user can
+recompute these addresses, and only the user can find which records they own.
+
+{/* DIAGRAM: key-derivation
+    File: /images/diagrams/key-derivation.png
+    Show: wallet signs EIP-712 "arkognito key v1" -> HKDF -> root key (stays in the key worker) ->
+    per record: random 15-byte id -> HKDF -> one-time key S_n; and root -> tag key -> encrypted vtag(id). */}
+
+## One signature, once
+
+When a client starts, the wallet signs this EIP-712 message:
+
+```text
+domain:  { name: "arkognito", version: "1", chainId: 7738577 }
+message: { purpose: "arkognito key v1", app: "<your app>", chainId: 7738577 }
+```
+
+- The **app** name is part of the message, so each app gets an independent set of keys.
+- The **chain id** is part of it, so testnet keys never carry over to another network.
+- The wallet shows the purpose, so users can spot a site asking for it under false pretences.
+
+The SDK signs **twice** and compares. Some wallets (certain MPC, passkey or hardware setups) produce
+a different signature each time, which would lose the user's keys on the next login. Those wallets
+are refused; a random root with a recovery code is the fallback.
+
+From the signature the SDK derives a private **root key**:
+
+```text
+root = HKDF-SHA256(signature, info = "arkognito/root/v1/" + app)
+```
+
+In a browser the root lives in a Web Worker and never reaches the page.
+
+## A fresh key per record
+
+For each record the SDK picks a random 15-byte id and derives the record's key from it:
+
+```text
+k_record = HKDF-SHA256(root, info = "record/" + hex(id), 48 bytes), reduced to a secp256k1 key
+S        = address(k_record)
+```
+
+There is no counter. That matters:
+
+- **Nothing is ever reused.** A counter would restart after old records expire and hand out an old
+  address again, linking new and old records in history.
+- **Devices cannot collide.** Two devices writing at once never pick the same address.
+- **Nothing to sync.** A new device needs only the wallet.
+
+## Tags: how you find them again
+
+Random ids would be impossible to find again, so every record carries its id in a `vtag` attribute,
+encrypted under a key only the root can derive:
+
+```text
+tagKey = HKDF-SHA256(root, info = "arkognito/tag/v1")
+vtag   = base64url(iv || AES-256-GCM(tagKey, iv, kind || id, aad = "arkognito/tag/v1|" + app))
+```
+
+Every tag is 44 bytes (59 characters) with a fresh IV, for records and scopes alike, so tags look
+identical to everyone else. To find their records, a user downloads the app's tags and tries to
+open each one. Those that open are theirs. See [finding your records](/concepts/finding-your-records).
+
+## Scopes
+
+A scope's key derives from a hash of its name instead of a random id, so every record in a scope
+shares one owner on purpose. See [scopes](/guides/private-payloads#scopes-one-owner-on-purpose).
+
+## What a key can sign
+
+A derived key signs exactly two things: [record envelopes](/concepts/record-envelope) and
+[ownership proofs](/guides/ownership-proofs). The key worker builds each digest itself from
+structured fields. There is no "sign these bytes" operation, so a compromised page cannot make a
+one-time key sign a statement that links it to the wallet.
+
+## Losing the wallet
+
+- **Lost wallet:** the records stay on Arkiv until they expire, but cannot be found or proven.
+- **Leaked derivation signature:** whoever holds it can find all of that user's records in that
+  app. Past records cannot be made unlinkable again; start a new key purpose for future ones.
+- **Random-root mode:** the recovery code (`arkognito1-…`) replaces the wallet signature. Keep it
+  like a seed phrase.

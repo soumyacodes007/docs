@@ -1,0 +1,65 @@
+---
+title: "Fingerprinting"
+description: "Fresh owners are not enough if the content itself identifies the writer. How Arkognito guards against it."
+keywords:
+  - "fingerprinting"
+  - "k-anonymity"
+  - "check()"
+  - "padding"
+---
+
+A fresh owner hides **who** wrote a record. The record itself can still give the writer away: an
+unusual size, an odd lifetime, an exact timestamp, a precise location, or a rare combination of
+ordinary values. Arkognito removes the signals it can and warns about the rest.
+
+## Removed automatically
+
+| Signal | What Arkognito does |
+| --- | --- |
+| Payload size | Padded to 512 B, 1 KB, 4 KB or 16 KB |
+| Encryption | Encrypted and plain records of the same input are the same size |
+| Lifetime | Rounded up to 1 h, 1 d, 7 d, 30 d or 90 d |
+| Creator | Always a shared relayer |
+| Position in a batch | Shuffled; spent markers shuffled separately |
+| Timing | Batching plus a random client delay |
+| Tag | Every tag is the same length with a fresh IV |
+
+## Warned about
+
+`check()` runs on every write and returns warnings; with `strict: true` the write is refused instead.
+
+```ts
+const warnings = ark.check({ attributes, expires, payload })
+```
+
+| Code | Flags |
+| --- | --- |
+| `timestamp` | Numbers that look like exact unix times, or time-named attributes |
+| `precise-location` | Coordinates with more than 4 decimals (about 11 m) |
+| `postal-code` | Postal-code attributes, which identify people in small areas |
+| `free-text` | Long strings with spaces in attributes; put text in the payload |
+| `expiry-rounded` | The lifetime will be rounded up to a bucket |
+| `expiry-too-long` | Longer than 90 days |
+| `payload-too-large` | Will not fit in 16 KB |
+| `rare-combination` | Fewer than `rarityK` (default 3) existing records share these attribute values |
+
+The last one is a k-anonymity check: a record with `district: "tiny-village"` stands out even with
+a fresh owner if nobody else in the app wrote from there.
+
+## Safer values
+
+```ts
+import { coarse } from "arkognito"
+import { dec } from "@arkiv-network/sdk/attr"
+
+coarse.day(Date.now())   // "2026-10-13"
+coarse.hour(Date.now())  // "2026-10-13T09"
+dec(coarse.geo(18.520430)) // "18.52": about 1 km
+coarse.bucket(37, 10)    // 30
+```
+
+## What no code can fix
+
+Content that identifies a person by itself, such as the only report ever filed from a small
+village or a payload that names someone, stays identifying. Design your schema so that what is
+public is coarse, and put anything personal in an [encrypted payload](/guides/private-payloads).

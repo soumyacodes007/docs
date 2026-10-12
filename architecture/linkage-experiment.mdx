@@ -1,0 +1,89 @@
+---
+title: "Linkage experiment"
+description: "Can someone reading Arkiv group Arkognito records by person? Method, results and limits."
+keywords:
+  - "linkage experiment"
+  - "anonymity evaluation"
+  - "observer"
+---
+
+We measured whether an outside observer, reading only public chain data, can tell which Arkognito
+records were written by the same person. Runs were on the Tiramisu testnet in October 2026.
+
+## Setup
+
+- 5 synthetic users, each with a throwaway wallet and its own key vault.
+- Each writes 10 records through one relayer (`k = 5`, max wait 30 s, at least 5 blocks between
+  flushes), with the SDK's normal behaviour: one record in flight per user and a random 0–15 s delay
+  before each submission.
+- Every record has the same app attribute and a JSON payload with 0–60 bytes of random filler, so
+  raw sizes differ.
+- The ground truth (who wrote what) is kept only by the test, never on Arkiv.
+
+Script: [`tests/phase3.ts`](https://github.com/soumyacodes007/Arkognito/blob/main/tests/phase3.ts),
+observer: [`tests/observer.ts`](https://github.com/soumyacodes007/Arkognito/blob/main/tests/observer.ts).
+
+{/* DIAGRAM: linkage-experiment
+    File: /images/diagrams/linkage-experiment.png
+    Show: 5 users x 10 records -> relayer -> 10 batches of 5 on Arkiv -> observer reads only chain
+    data and guesses "same person" pairs across consecutive batches -> precision vs 1/5 chance. */}
+
+## What the observer reads
+
+Only public data:
+
+```text
+project = str('<project>')        select key, owner, creator, createdAt, expiresAt, payload
+eth_getLogs(registry, block)      EntityCreated order inside each transaction
+```
+
+## The attack
+
+Records are grouped into batches by transaction. For each record in batch *t*, the observer guesses
+which record in batch *t+1* belongs to the same person, using the best signal available, in order:
+
+1. the same `$owner` (a reused address);
+2. the same position inside the transaction;
+3. the same payload size and the same lifetime.
+
+Precision is the share of guessed pairs that really belong to one person.
+
+## Results
+
+| Measure | Result |
+| --- | --- |
+| Records per run | 50 |
+| Batches | 10, every one of size 5 |
+| Batches holding two records of one user | 0 |
+| Distinct `$owner` values | 50 (one per record) |
+| Distinct `$creator` values | 1 (the relayer) |
+| Distinct payload sizes | 1 (every envelope padded to 1024 bytes) |
+| Observer precision, three runs | **0.111**, **0.244**, **0.156** (45 guessed pairs each; mean 0.170) |
+| Random guessing (1 of 5 users) | 0.200 |
+| Without Arkognito (one owner query per wallet) | 1.000 |
+
+With owners never reused, sizes padded, lifetimes bucketed and order shuffled, the only signal left
+is position, and shuffling makes position random. The observer's precision sits around chance; with
+45 pairs per run, single runs scatter on either side of it.
+
+## Related evidence
+
+The repository's on-chain edge-case suite (27 checks) also passes on Tiramisu, including:
+
+- no read made by a client names the user's record keys or owners;
+- a second device finds every record with nothing but the wallet;
+- a relayer that tampers, misdirects or crashes after writing is caught without duplicates;
+- `minAnonymity` holds or refuses small batches;
+- requests through the OHTTP relay never reach the relayer directly.
+
+See the [edge-case register](/reference/edge-cases).
+
+## What this does not show
+
+- **The relayer itself** sees request times and, without OHTTP, IP addresses. This experiment is
+  about outside observers.
+- **Anonymity is per batch.** In quiet periods a batch can be smaller than `k`; `minAnonymity`
+  refuses small batches when the user asks.
+- **Content can identify a person** on its own. `check()` warns but cannot catch everything.
+- **Five users is a small population.** The bound is the batch size: from these signals an observer
+  cannot do better than one in the batch size.

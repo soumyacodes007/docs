@@ -1,0 +1,160 @@
+---
+title: "Relayer API"
+description: "HTTP endpoints of the Arkognito relayer, the token issuer and the OHTTP relay."
+keywords:
+  - "relayer API"
+  - "HTTP API"
+  - "token issuer API"
+---
+
+All bodies are JSON unless noted. CORS is open. Relayers do not log request IPs or bodies. The
+interactive version of this page is in the **API Reference** tab.
+
+## Relayer
+
+### GET /v1/info
+
+```json
+{
+  "address": "0xfd6c…4725",
+  "version": "arkognito-relayer/1",
+  "chainId": 7738577,
+  "minBatch": 5,
+  "maxWaitMs": 60000,
+  "minIntervalBlocks": 5,
+  "tokensRequired": true,
+  "issuer": "0xC3D5…90f1",
+  "issuerUrl": "https://relay-1.example.com",
+  "maxMinAnonymity": 50,
+  "maxHoldMs": 1800000,
+  "ohttpKey": "0x…"
+}
+```
+
+`issuer` and `issuerUrl` are present when tokens are required; `ohttpKey` when OHTTP is on.
+
+### POST /v1/records
+
+Queue a sealed record.
+
+```json
+{
+  "app": "my-app",
+  "owner": "0x0C9E…68C5c",
+  "envelope": "{\"v\":1,\"app\":\"my-app\",…}",
+  "attributes": {
+    "project": { "type": "str", "value": "my-app" },
+    "vtag": { "type": "str", "value": "…" },
+    "count": { "type": "i32", "value": 3 }
+  },
+  "expSeconds": 86400,
+  "token": { "epoch": 20739, "nonce": "0x…", "signature": "base64…" },
+  "minAnonymity": 5,
+  "maxHoldMs": 600000
+}
+```
+
+`u64` and `u256` attribute values are decimal strings. `token` is required when the relayer requires
+tokens; `minAnonymity` and `maxHoldMs` are optional.
+
+Returns `202 { "id": "<uuid>" }`.
+
+| Status | When |
+| --- | --- |
+| `400` | Invalid request: `owner` not an address or equal to the relayer; envelope not padded to 512/1024/4096/16384 bytes; `expSeconds` not a bucket or not equal to the envelope's; `app` mismatch; invalid or uppercase attribute name; missing `project`; more than 32 attributes; `minAnonymity` or `maxHoldMs` out of range; envelope signature does not recover to `owner`; body not JSON |
+| `402` | Tokens required and none sent |
+| `403` | Token rejected: invalid, spent, from a day no longer accepted, or no issuer key on Arkiv |
+| `413` | Body over 64 KB |
+| `429` | More than `RATE_LIMIT_PER_MIN` requests a minute from one address (tokens off only) |
+| `503` | Queue full |
+
+### GET /v1/records/:id
+
+```json
+{ "id": "…", "state": "queued", "position": 3 }
+```
+
+```json
+{
+  "id": "…",
+  "state": "written",
+  "entityKey": "0x334c…bb805",
+  "txHash": "0x…",
+  "block": "352358",
+  "batchSize": 5
+}
+```
+
+```json
+{ "id": "…", "state": "failed", "error": "no batch of 5 formed in time; not written" }
+```
+
+`position` (queued only) is the number of requests ahead. `404` for an unknown id. Statuses are
+kept for an hour after they finish.
+
+### POST /v1/ohttp
+
+An Oblivious HTTP encapsulated request (`message/ohttp-req`, up to 128 KB) carrying any of the
+requests above; the response is `message/ohttp-res`. `404` when OHTTP is off, `400` when the request
+cannot be opened. See the [protocol reference](/reference/protocol#oblivious-http).
+
+### GET /healthz
+
+```json
+{
+  "ok": true,
+  "address": "0xfd6c…4725",
+  "queue": 0,
+  "batches": 12,
+  "lastFlushBlock": "352358",
+  "heartbeat": "0x91f8…e452",
+  "lastBeat": 1791633000000,
+  "balanceGlm": 1.97,
+  "doubleSpendsDetected": 0
+}
+```
+
+## Token issuer
+
+Served by a relayer started with `ISSUER=on`.
+
+### GET /v1/issuer/key
+
+Query: `app`, `epoch` (today's UTC day number). Publishes today's key on Arkiv if needed:
+
+```json
+{ "issuer": "0xC3D5…90f1", "app": "my-app", "epoch": 20739, "entityKey": "0x4097…7efa" }
+```
+
+Clients read the key itself from Arkiv, never from this response. `400` if `epoch` is not today.
+
+### POST /v1/tokens/issue
+
+```json
+{
+  "app": "my-app",
+  "epoch": 20739,
+  "wallet": "0x2F5d…d31e",
+  "blinded": ["base64…", "base64…"],
+  "ts": 1791633000000,
+  "walletSignature": "0x…",
+  "attestation": "KENDRA-9F2C"
+}
+```
+
+`walletSignature` is the wallet's `personal_sign` of the issuance message (see the
+[protocol](/reference/protocol#rate-limit-tokens)). `attestation` only when the issuer requires codes.
+
+```json
+{ "blindSignatures": ["base64…", "base64…"], "remaining": 3 }
+```
+
+`403` with `{ "error": … }` for: epoch not today, 0 or more than 20 tokens asked for, timestamp more
+than 5 minutes off, wrong wallet signature, missing or used attestation code, quota exceeded.
+
+## OHTTP relay
+
+| Endpoint | Description |
+| --- | --- |
+| `POST /ohttp` | Header `x-arkognito-target: <relayer url>`, body an encapsulated request. Forwarded to `<target>/v1/ohttp`. `403` for unverified targets, `413` over 128 KB, `502` if the relayer fails. |
+| `GET /healthz` | `{ "ok": true, "role": "ohttp-relay", "targets": 2 }` |

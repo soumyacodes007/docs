@@ -1,0 +1,246 @@
+---
+title: "SDK reference"
+description: "Every export of the arkognito package: the private client, vaults, verification, tokens, OHTTP and helpers."
+keywords:
+  - "arkognito SDK"
+  - "createPrivateClient"
+  - "API reference"
+---
+
+```ts
+import { createPrivateClient } from "arkognito"
+```
+
+Peer dependencies: `@arkiv-network/sdk` 0.8.1 and `viem`. Works in browsers and Node.js 22+.
+
+## createPrivateClient
+
+```ts
+const ark = await createPrivateClient(options)
+```
+
+Derives the user's keys (one wallet signature, checked twice), contacts the relayers and, when a
+relayer requires tokens, starts fetching the day's tokens.
+
+### Options
+
+<ParamField path="app" type="string" required>
+  Namespace for key derivation. Different apps get independent keys. Also the default `project`.
+</ParamField>
+
+<ParamField path="wallet" type="viem or Arkiv SDK wallet client">
+  Signs the derivation message, and the token issuance request when tokens are needed. Either this
+  or `vault` is required.
+</ParamField>
+
+<ParamField path="vault" type="Vault">
+  A ready key vault (`KeyVault` or `WorkerVault`) instead of `wallet`, for example random-root mode.
+</ParamField>
+
+<ParamField path="project" type="string" default="app">
+  Value of the `project` attribute on this app's records. Reads and writes are scoped to it.
+</ParamField>
+
+<ParamField path="relayers" type="string[]">
+  Relayer URLs. Omitted: discover live relayers from their heartbeat entities on Arkiv.
+</ParamField>
+
+<ParamField path="ohttpRelay" type="string">
+  Send every relayer call through this Oblivious HTTP relay. Gateway keys are read from heartbeats.
+</ParamField>
+
+<ParamField path="isolateKeys" type="boolean" default="true in browsers">
+  Keep keys in a Web Worker. If the worker cannot start, the client warns and keeps keys in-process.
+</ParamField>
+
+<ParamField path="publicClient" type="Arkiv public client" default="public Tiramisu client">
+  Reader used for all Arkiv queries. Pass your own to use a different RPC or a proxy.
+</ParamField>
+
+<ParamField path="delayMs" type="[number, number]" default="[0, 20000]">
+  Random delay before each submission, in milliseconds.
+</ParamField>
+
+<ParamField path="minAnonymity" type="number" default="1">
+  Smallest batch a record may land in. Above 1, the relayer holds the record until a batch that
+  large forms, or fails it.
+</ParamField>
+
+<ParamField path="maxHoldMs" type="number" default="600000 when minAnonymity is set">
+  How long the relayer may hold a record for `minAnonymity`.
+</ParamField>
+
+<ParamField path="inclusionTimeoutMs" type="number" default="3 × (maxWaitMs + 2 s × minIntervalBlocks) + 30 s">
+  Give up on a relayer when its queue position has not improved for this long.
+</ParamField>
+
+<ParamField path="pollMs" type="number" default="2000">
+  Status polling interval.
+</ParamField>
+
+<ParamField path="strict" type="boolean" default="false">
+  Refuse a write when `check()` returns any warning.
+</ParamField>
+
+<ParamField path="rarityK" type="number" default="3">
+  Warn when fewer than this many existing records share a record's attribute values. `0` disables it.
+</ParamField>
+
+<ParamField path="coverBatches" type="number" default="2">
+  Extra random batches fetched alongside your own when reading.
+</ParamField>
+
+<ParamField path="tokens" type="&quot;auto&quot; | TokenSource" default="&quot;auto&quot;">
+  `"auto"` fetches tokens with `wallet` at session start when a relayer requires them.
+</ParamField>
+
+<ParamField path="tokenStore" type="TokenStore" default="memoryStore()">
+  Where auto mode keeps unspent tokens. `browserTokenStore()` keeps them across sessions.
+</ParamField>
+
+<ParamField path="tokenAttestation" type="string">
+  One-time attestation code for issuers that require one.
+</ParamField>
+
+<ParamField path="trustedRelayersOnly" type="boolean" default="false">
+  Count a record as the app's only if a known relayer created it.
+</ParamField>
+
+<ParamField path="fetch" type="typeof fetch">
+  Custom `fetch` for relayer and issuer calls.
+</ParamField>
+
+### Client
+
+| Member | Description |
+| --- | --- |
+| `createEntity(params)` | Write a record. See below. |
+| `myEntities({ refresh?, where? })` | Your verified records, newest first. `where` filters attribute values locally. |
+| `proveOwnership(entityKey, { challenge, verifier, ttlSeconds? })` | An ownership proof for one record. `ttlSeconds` defaults to 300. |
+| `check({ attributes, expires, payload })` | Fingerprinting warnings, synchronous. |
+| `checkRarity(attributes, k?)` | Rarity warnings against the app's existing records. |
+| `scopeAddress(name)` | The owner address of a scope. |
+| `relayers()` | `{ url, address, bad, info }` for each relayer. |
+| `relayerAddresses()` | Addresses of reachable relayers. |
+| `app`, `project`, `vault` | The values in use. |
+
+### createEntity
+
+<ParamField path="payload" type="Uint8Array" required>The record's data.</ParamField>
+<ParamField path="contentType" type="string" required>Your content type, kept inside the envelope.</ParamField>
+<ParamField path="attributes" type="AttributeInputs">Queryable attributes. Names must be lowercase.</ParamField>
+<ParamField path="expires" type="ExpirationTime | number" required>A relative lifetime, rounded up to 1 h, 1 d, 7 d, 30 d or 90 d.</ParamField>
+<ParamField path="scope" type="string">Write under a scope: all records in it share one owner.</ParamField>
+<ParamField path="encrypt" type="boolean" default="false">Encrypt the payload so only you can read it.</ParamField>
+
+<ResponseField name="entityKey" type="Hex">Arkiv entity key.</ResponseField>
+<ResponseField name="owner" type="Address">The one-time owner.</ResponseField>
+<ResponseField name="txHash" type="Hex">The batch transaction.</ResponseField>
+<ResponseField name="relayer" type="string">The relayer that wrote it (empty when recovered).</ResponseField>
+<ResponseField name="batchSize" type="number">Records in the batch, including this one.</ResponseField>
+<ResponseField name="recovered" type="boolean">The relayer did not answer but the record had landed; nothing was written twice.</ResponseField>
+<ResponseField name="warnings" type="CheckWarning[]">Fingerprinting and rarity warnings.</ResponseField>
+
+### MyRecord
+
+Returned by `myEntities()`: `key`, `entityKey`, `owner`, `creator`, `app`, `contentType`, `data`
+(decrypted), `toText()`, `toJson()`, `attributes`, `createdAt`, `expiresAt`, `expSeconds`,
+`envelope`, `ref`.
+
+## Vaults
+
+| Export | Description |
+| --- | --- |
+| `KeyVault.fromWallet(wallet, app, opts?)` | Keys in this thread. Signs twice; refuses non-deterministic and smart-contract wallets. |
+| `KeyVault.fromSignature(signature, app)` | From a derivation signature you already hold. |
+| `KeyVault.random(app)` | Random root. Returns `{ vault, recoveryCode }`. |
+| `KeyVault.fromRecoveryCode(code, app)` | Restore a random root. |
+| `KeyVault.signDerivation(wallet, app, opts?)` | Only the checked derivation signature. |
+| `WorkerVault.fromWallet(wallet, app, opts?)` | Keys in a Web Worker. Same checks. |
+| `WorkerVault.random(app)`, `WorkerVault.fromRecoveryCode(code, app)` | Random-root mode in a worker. |
+| `WorkerVault.spawn()` | The bundled worker. `vault.terminate()` stops it. |
+
+Every vault implements `Vault`: `newRecord()`, `scopeRecord(name)`, `openTags(tags)`,
+`addressOf(ref)`, `signer(ref)`, `encrypt(ref, data)`, `decrypt(ref, data)`. A signer
+(`ArkognitoSigner`) exposes only `address`, `signEnvelope(body, attributes)` and `signProof(body)`.
+
+Related: `derivationTypedData(app, chainId?)`, `DERIVATION_PURPOSE` (`"arkognito key v1"`),
+`scopeRef(name)`, `TAG_BYTES` (44).
+
+## Verification and proofs
+
+| Export | Description |
+| --- | --- |
+| `verifyRecord(entity, { app?, relayers?, owner? })` | `{ ok: true, record }` or `{ ok: false, reason }`. Needs key, owner, creator, payload and attributes; checks lifetime when `createdAt` and `expiresAt` are present. |
+| `signOwnershipProof(signer, { entityKey, challenge, verifier, ttlSeconds?, chainId? })` | Low-level proof signing. |
+| `verifyOwnershipProof(proof, { challenge, verifier, client, now? })` | `{ ok: true }` or `{ ok: false, reason }`. |
+| `proofTypedData(body)` | The EIP-712 structure. |
+
+## Reading
+
+| Export | Description |
+| --- | --- |
+| `listApp(client, project, relayers?)` | The app's records without payloads, pinned to one block. |
+| `fetchBatches(client, project, [{ block, creator }])` | Full records of whole batches. |
+| `discoverRelayers(reader, fetch?)` | Live relayers whose `/v1/info` matches their heartbeat. |
+| `heartbeatRelayers(reader)` | All live heartbeats, unverified. |
+
+## Tokens
+
+| Export | Description |
+| --- | --- |
+| `new TokenWallet({ wallet, reader, issuer, issuerUrl, store?, allowOnDemand?, attestation?, minAgeMs? })` | Client-side tokens. `minAgeMs` defaults to 60000. |
+| `tokenWallet.acquire(app, count, attestation?)` | Fetch tokens now. |
+| `tokenWallet.prefetchLater(app, count, withinMs?)` | Fetch at a random time within `withinMs` (default 6 h). |
+| `tokenWallet.available(app)` / `tokenWallet.source()` | Count, and a `TokenSource` for the client. |
+| `memoryStore()`, `browserTokenStore(name?)` | Token stores. The browser store uses `localStorage` key `arkognito:tokens`. |
+| `fetchIssuerKey(reader, issuer, app, epoch)` | Today's issuer key from Arkiv; throws `IssuerEquivocationError` on two keys. |
+| `epochOf(ms?)`, `acceptableEpochs(ms?)` | UTC day numbers. |
+| `verifyToken(key, token)`, `tokenId(prepared)`, `tokenSuite()`, `importIssuerKey(spki)`, `issuanceMessage(req, ts)` | Lower-level helpers, used by relayers. |
+
+## Fingerprinting
+
+| Export | Description |
+| --- | --- |
+| `checkRecord({ attributes?, expires?, payload? })` | Warnings: `timestamp`, `precise-location`, `postal-code`, `free-text`, `expiry-rounded`, `expiry-too-long`, `payload-too-large`. |
+| `checkRarity(attributes, existing, k)` | `rare-combination` warning. |
+| `coarse.day(d)`, `coarse.hour(d)`, `coarse.geo(x, decimals = 2)`, `coarse.bucket(x, step)` | Safer values. |
+
+## Envelopes and attributes
+
+`sealEnvelope`, `parseEnvelope`, `envelopeSigner`, `envelopeDigest`, `padEnvelope`,
+`expiryBucket(seconds)`, `expirySeconds(expires)`, `toBase64`, `fromBase64`; `canonicalAttributes`,
+`toWire`, `fromWire`, `nameProblem(name)`, `assertNodeSafeNames(attributes)`. See the
+[protocol reference](/reference/protocol) for formats.
+
+## Oblivious HTTP
+
+| Export | Description |
+| --- | --- |
+| `ohttpCall(relayUrl, target, gatewayKey, { method, path, body? }, fetch?)` | One encapsulated request. |
+| `OhttpGateway.fromSeed(seed)` | Gateway side: `publicKey`, `open(message)` returning the request and a `seal(response)` function. |
+
+## Constants
+
+| Constant | Value |
+| --- | --- |
+| `TIRAMISU_CHAIN_ID` | `7738577` |
+| `ARKOGNITO_PROJECT` | `"arkognito-7f3k"` |
+| `BLOCK_TIME_SECONDS` | `2` |
+| `EXPIRY_BUCKETS` | `[3600, 86400, 604800, 2592000, 7776000]` |
+| `PAD_BUCKETS` | `[512, 1024, 4096, 16384]` |
+| `ENVELOPE_VERSION` | `1` |
+| `ENVELOPE_CONTENT_TYPE` | `"application/json"` |
+| `API_VERSION` | `"arkognito-relayer/1"` |
+
+Protocol types are exported too: `SubmitRequest`, `StatusResponse`, `InfoResponse`,
+`TokenRedemption`, `IssueRequest`, `IssueResponse`.
+
+## Errors
+
+| Error | Thrown when |
+| --- | --- |
+| `ArkognitoError` | Client-level failures: no relayer, every relayer failed, `strict` refusal, invalid attribute names, unknown record in `proveOwnership` |
+| `NonDeterministicWalletError` | The wallet produced two different derivation signatures |
+| `SmartContractWalletError` | The wallet is a contract account |
+| `IssuerEquivocationError` | The issuer published two keys for one app and day |

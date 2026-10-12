@@ -1,0 +1,159 @@
+---
+title: "Deploy on Railway and Vercel"
+description: "Put the relayers on Railway and the demo site on Vercel, step by step."
+keywords:
+  - "Railway"
+  - "Vercel"
+  - "deploy Arkognito"
+---
+
+This deploys two relayers (one also runs the token issuer) on Railway and the demo site on Vercel.
+About 30 minutes. The demo site needs no relayer URLs: it finds the relayers through their
+heartbeat entities on Arkiv as soon as they are up with https URLs.
+
+## Before you start
+
+Get these through a password manager or another private channel, never in chat, an issue or the
+repository:
+
+- `RELAYER_1_PRIVATE_KEY`, `RELAYER_2_PRIVATE_KEY`, `ISSUER_WALLET_PRIVATE_KEY`: three funded
+  testnet wallets
+- `ISSUER_WALLET_ADDRESS`: the issuer wallet's public address
+- `ISSUER_RSA_SEED`: 32 bytes of hex
+- `ARKIV_ACCESS_KEY` (optional): an Arkiv Hub key for higher RPC rate limits
+
+Or create your own with `npm run setup` and fund them from the
+[faucet](https://hub.arkiv.network/faucet).
+
+<Warning>
+  **One wallet, one place.** Once a relayer wallet runs on Railway, do not also run it on a laptop.
+  Two processes on one wallet make each other's transactions fail.
+</Warning>
+
+## relay-1: relayer and issuer
+
+<Steps>
+<Step title="Create the service">
+
+In Railway: **New Project → Deploy from GitHub repo →** `soumyacodes007/Arkognito`. Railway reads
+`railway.json`: Dockerfile build, `/healthz` health check, restart always. Rename the service
+`relay-1`.
+
+</Step>
+<Step title="Add a domain and a volume">
+
+**Settings → Networking → Generate Domain** with target port **8787**. Then **Volumes → New
+Volume** with mount path **`/data`**.
+
+</Step>
+<Step title="Set variables">
+
+```env
+ROLE=relayer
+PORT=8787
+RELAYER_NAME=relay-1
+RELAYER_PRIVATE_KEY=<RELAYER_1_PRIVATE_KEY>
+RELAYER_PUBLIC_URL=https://<relay-1 domain>
+REQUIRE_TOKENS=on
+ISSUER=on
+ISSUER_WALLET_PRIVATE_KEY=<ISSUER_WALLET_PRIVATE_KEY>
+ISSUER_RSA_SEED=<ISSUER_RSA_SEED>
+ISSUER_QUOTA_FILE=/data/issuer-quota.json
+TOKENS_PER_DAY=20
+MAX_WAIT_MS=20000
+ARKIV_ACCESS_KEY=<ARKIV_ACCESS_KEY>
+RAILWAY_RUN_UID=0
+```
+
+</Step>
+<Step title="Deploy and check">
+
+`https://<relay-1 domain>/healthz` returns `"ok": true` and a heartbeat entity key.
+`https://<relay-1 domain>/v1/info` shows `"tokensRequired": true` and an `issuerUrl` equal to its
+own URL.
+
+</Step>
+</Steps>
+
+<AccordionGroup>
+<Accordion title="Why these variables">
+
+- `PORT` must equal the domain's target port, or Railway answers 502.
+- `RELAYER_PUBLIC_URL` must be the **https** domain: it is announced on Arkiv, and browsers only
+  use https relayers.
+- `RAILWAY_RUN_UID=0`: Railway mounts volumes as root and the image runs as a normal user; without
+  it the quota file cannot be written. Skip the volume, this variable and `ISSUER_QUOTA_FILE` if you
+  accept quotas resetting on restart.
+- `MAX_WAIT_MS=20000`: a private save waits at most 20 s for other users (default 60 s). Raise it
+  for more privacy once there is real traffic.
+- `TOKENS_PER_DAY=20`: writes per wallet per day (default 5).
+
+</Accordion>
+</AccordionGroup>
+
+## relay-2
+
+Same repository, a second service named `relay-2`, domain with target port **8788**, no volume:
+
+```env
+ROLE=relayer
+PORT=8788
+RELAYER_NAME=relay-2
+RELAYER_PRIVATE_KEY=<RELAYER_2_PRIVATE_KEY>
+RELAYER_PUBLIC_URL=https://<relay-2 domain>
+REQUIRE_TOKENS=on
+ISSUER_WALLET_ADDRESS=<ISSUER_WALLET_ADDRESS>
+ISSUER_URL=https://<relay-1 domain>
+MAX_WAIT_MS=20000
+ARKIV_ACCESS_KEY=<ARKIV_ACCESS_KEY>
+```
+
+`ISSUER_WALLET_ADDRESS` and `ISSUER_URL` make relay-2 accept relay-1's tokens. Never give relay-2
+relay-1's key.
+
+## OHTTP relay (optional)
+
+Only needed once the app uses `ohttpRelay`, and ideally run by someone else:
+
+```env
+ROLE=ohttp-relay
+PORT=8790
+```
+
+Domain with target port 8790; no keys, no volume. `/healthz` shows how many relayers it has
+verified.
+
+## Demo site on Vercel
+
+<Steps>
+<Step title="Import the repository">
+
+**Add New → Project →** `soumyacodes007/Arkognito`. Leave **Root Directory** at the repository
+root: the demo builds the SDK from source. The repository's `vercel.json` sets the install command
+(`npm ci`), build command (`npm run build -w arkognito-demo`) and output (`apps/demo/dist`).
+
+</Step>
+<Step title="Deploy">
+
+No environment variables. Node.js 22.
+
+</Step>
+<Step title="Try it">
+
+- `/observer.html` reads straight from Arkiv.
+- `/sketch-private.html` → **Connect MetaMask**: add the Tiramisu network, sign three times (two
+  for the key, one for tokens), draw, save. About 20–30 s later the sketch appears under **My
+  sketches**.
+
+</Step>
+</Steps>
+
+## Final checklist
+
+- [ ] Both relayers' `/healthz` return `"ok": true`.
+- [ ] In a private window on another device the demo loads and the observer view shows data.
+- [ ] A private sketch saves and appears in **My sketches** after a reload.
+- [ ] The observer's owner query on your MetaMask address shows only your **public** sketches.
+- [ ] Railway logs show `batch N: … record(s)` lines and no `LOW BALANCE`.
+
+Problems: see [troubleshooting](/operations/troubleshooting).

@@ -1,0 +1,262 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Arkognito relayer API",
+    "version": "arkognito-relayer/1",
+    "description": "HTTP API of an Arkognito relayer and, when it runs with ISSUER=on, the blind-token issuer. All bodies are JSON unless noted. CORS is open. Relayers do not log request IPs or bodies.",
+    "license": { "name": "MIT", "url": "https://github.com/soumyacodes007/Arkognito/blob/main/LICENSE" }
+  },
+  "servers": [
+    { "url": "https://relay-1.example.com", "description": "Your relayer" },
+    { "url": "http://localhost:8787", "description": "Local relayer" }
+  ],
+  "tags": [
+    { "name": "Relayer", "description": "Submit records and follow their status." },
+    { "name": "Issuer", "description": "Daily issuer keys and blind token issuance (relayers with ISSUER=on)." },
+    { "name": "Operations", "description": "Health and Oblivious HTTP." }
+  ],
+  "paths": {
+    "/v1/info": {
+      "get": {
+        "tags": ["Relayer"],
+        "summary": "Relayer information",
+        "description": "Address, batching settings, token requirement, issuer and OHTTP gateway key.",
+        "operationId": "getInfo",
+        "responses": {
+          "200": { "description": "Relayer information", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InfoResponse" } } } }
+        }
+      }
+    },
+    "/v1/records": {
+      "post": {
+        "tags": ["Relayer"],
+        "summary": "Submit a sealed record",
+        "description": "Queues a record sealed by the SDK. The relayer checks the envelope signature against `owner` before queueing.",
+        "operationId": "submitRecord",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubmitRequest" } } }
+        },
+        "responses": {
+          "202": { "description": "Queued", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubmitResponse" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "402": { "description": "Tokens are required and none was sent", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Token rejected: invalid, already spent, from a day no longer accepted, or no issuer key on Arkiv", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "413": { "description": "Body over 64 KB", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "429": { "description": "Rate limit (tokens off only)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "503": { "description": "Queue is full; try another relayer", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/v1/records/{id}": {
+      "get": {
+        "tags": ["Relayer"],
+        "summary": "Record status",
+        "description": "Status of a submitted record. Kept for an hour after it finishes.",
+        "operationId": "getRecordStatus",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "description": "The id returned by POST /v1/records.", "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Status", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StatusResponse" } } } },
+          "404": { "description": "Unknown id", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/v1/ohttp": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Oblivious HTTP gateway",
+        "description": "Accepts an encapsulated request (RFC 9458 §4, HPKE X25519 / HKDF-SHA256 / AES-128-GCM) carrying a JSON request for any endpoint above, and returns the encapsulated response. Normally reached through an OHTTP relay, never directly by clients.",
+        "operationId": "ohttpGateway",
+        "requestBody": {
+          "required": true,
+          "content": { "message/ohttp-req": { "schema": { "type": "string", "format": "binary" } } }
+        },
+        "responses": {
+          "200": { "description": "Encapsulated response", "content": { "message/ohttp-res": { "schema": { "type": "string", "format": "binary" } } } },
+          "400": { "description": "The request cannot be opened", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "OHTTP is off on this relayer", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "413": { "description": "Body over 128 KB", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "tags": ["Operations"],
+        "summary": "Health",
+        "operationId": "getHealth",
+        "responses": {
+          "200": { "description": "Healthy", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Health" } } } }
+        }
+      }
+    },
+    "/v1/issuer/key": {
+      "get": {
+        "tags": ["Issuer"],
+        "summary": "Publish today's issuer key",
+        "description": "Makes sure today's issuer key for the app is published on Arkiv and returns its entity key. Clients must read the key itself from Arkiv, never from this response.",
+        "operationId": "ensureIssuerKey",
+        "parameters": [
+          { "name": "app", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "epoch", "in": "query", "required": true, "description": "Today's UTC day number: floor(unix_ms / 86400000).", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Published", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IssuerKeyResponse" } } } },
+          "400": { "description": "app missing or epoch is not today", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Publishing failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/v1/tokens/issue": {
+      "post": {
+        "tags": ["Issuer"],
+        "summary": "Issue blind tokens",
+        "description": "Blind-signs up to 20 blinded messages (RSABSSA-SHA384-PSS-Randomized, RFC 9474) within the wallet's (or attestation code's) daily quota.",
+        "operationId": "issueTokens",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IssueRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Blind signatures", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IssueResponse" } } } },
+          "403": { "description": "Refused: epoch not today, 0 or more than 20 tokens, stale timestamp, wrong wallet signature, missing or used attestation code, or quota exceeded", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid submission: owner not an address or equal to the relayer; envelope not padded to a bucket; expSeconds not a bucket or not equal to the envelope's; app mismatch; invalid or uppercase attribute name; project attribute missing; more than 32 attributes; minAnonymity or maxHoldMs out of range; envelope signature does not recover to owner; body not JSON.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    },
+    "schemas": {
+      "Address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$", "examples": ["0x1111111111111111111111111111111111111111"] },
+      "Hex": { "type": "string", "pattern": "^0x[0-9a-fA-F]*$" },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": { "error": { "type": "string" } }
+      },
+      "InfoResponse": {
+        "type": "object",
+        "required": ["address", "version", "chainId", "minBatch", "maxWaitMs", "minIntervalBlocks", "tokensRequired", "maxMinAnonymity", "maxHoldMs"],
+        "properties": {
+          "address": { "$ref": "#/components/schemas/Address" },
+          "version": { "type": "string", "const": "arkognito-relayer/1" },
+          "chainId": { "type": "integer", "examples": [7738577] },
+          "minBatch": { "type": "integer", "examples": [5] },
+          "maxWaitMs": { "type": "integer", "examples": [60000] },
+          "minIntervalBlocks": { "type": "integer", "examples": [5] },
+          "tokensRequired": { "type": "boolean" },
+          "issuer": { "$ref": "#/components/schemas/Address", "description": "Issuer whose arkognito.issuerKey entities this relayer accepts, when tokens are required." },
+          "issuerUrl": { "type": "string", "format": "uri", "description": "Issuer base URL, when tokens are required." },
+          "maxMinAnonymity": { "type": "integer", "examples": [50] },
+          "maxHoldMs": { "type": "integer", "examples": [1800000] },
+          "ohttpKey": { "$ref": "#/components/schemas/Hex", "description": "OHTTP gateway key (X25519). Also published in the relayer's heartbeat." }
+        }
+      },
+      "WireValue": {
+        "type": "object",
+        "required": ["type", "value"],
+        "properties": {
+          "type": { "type": "string", "enum": ["str", "i32", "u64", "u256", "dec", "bool", "addr", "key", "bytes32"] },
+          "value": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }], "description": "u64 and u256 values are decimal strings." }
+        }
+      },
+      "TokenRedemption": {
+        "type": "object",
+        "required": ["epoch", "nonce", "signature"],
+        "properties": {
+          "epoch": { "type": "integer", "description": "UTC day of the issuer key that signed the token." },
+          "nonce": { "$ref": "#/components/schemas/Hex", "description": "The prepared 64-byte token message (32 random bytes + 32-byte nonce). Its sha256 becomes the spent-list id." },
+          "signature": { "type": "string", "description": "RSA blind signature over the prepared message, base64." }
+        }
+      },
+      "SubmitRequest": {
+        "type": "object",
+        "required": ["app", "owner", "envelope", "attributes", "expSeconds"],
+        "properties": {
+          "app": { "type": "string" },
+          "owner": { "$ref": "#/components/schemas/Address", "description": "The record's one-time owner." },
+          "envelope": { "type": "string", "description": "Sealed envelope JSON, padded to exactly 512, 1024, 4096 or 16384 bytes." },
+          "attributes": {
+            "type": "object",
+            "description": "Attribute name to typed value. Names are lowercase; must include project and vtag; at most 32.",
+            "additionalProperties": { "$ref": "#/components/schemas/WireValue" }
+          },
+          "expSeconds": { "type": "integer", "enum": [3600, 86400, 604800, 2592000, 7776000] },
+          "token": { "$ref": "#/components/schemas/TokenRedemption" },
+          "minAnonymity": { "type": "integer", "minimum": 1, "description": "Smallest batch this record may be written in." },
+          "maxHoldMs": { "type": "integer", "minimum": 1, "description": "How long the relayer may hold the record for minAnonymity." }
+        }
+      },
+      "SubmitResponse": {
+        "type": "object",
+        "required": ["id"],
+        "properties": { "id": { "type": "string", "format": "uuid" } }
+      },
+      "StatusResponse": {
+        "type": "object",
+        "required": ["id", "state"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "state": { "type": "string", "enum": ["queued", "written", "failed"] },
+          "position": { "type": "integer", "description": "While queued: requests ahead of this one." },
+          "entityKey": { "$ref": "#/components/schemas/Hex" },
+          "txHash": { "$ref": "#/components/schemas/Hex" },
+          "block": { "type": "string", "description": "Block the batch landed in (decimal string)." },
+          "batchSize": { "type": "integer", "description": "Records in the batch, including this one." },
+          "error": { "type": "string" }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "address": { "$ref": "#/components/schemas/Address" },
+          "queue": { "type": "integer" },
+          "batches": { "type": "integer" },
+          "lastFlushBlock": { "type": "string" },
+          "heartbeat": { "$ref": "#/components/schemas/Hex", "description": "Entity key of the relayer's heartbeat." },
+          "lastBeat": { "type": "integer", "description": "Unix milliseconds." },
+          "balanceGlm": { "type": "number" },
+          "doubleSpendsDetected": { "type": "integer" }
+        }
+      },
+      "IssuerKeyResponse": {
+        "type": "object",
+        "required": ["issuer", "app", "epoch", "entityKey"],
+        "properties": {
+          "issuer": { "$ref": "#/components/schemas/Address" },
+          "app": { "type": "string" },
+          "epoch": { "type": "integer" },
+          "entityKey": { "$ref": "#/components/schemas/Hex" }
+        }
+      },
+      "IssueRequest": {
+        "type": "object",
+        "required": ["app", "epoch", "wallet", "blinded", "ts", "walletSignature"],
+        "properties": {
+          "app": { "type": "string" },
+          "epoch": { "type": "integer", "description": "Today's UTC day number." },
+          "wallet": { "$ref": "#/components/schemas/Address" },
+          "blinded": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "type": "string", "description": "Blinded message, base64." } },
+          "ts": { "type": "integer", "description": "Unix milliseconds; must be within 5 minutes of the issuer's clock." },
+          "walletSignature": { "$ref": "#/components/schemas/Hex", "description": "personal_sign by wallet over the issuance message (see the protocol reference)." },
+          "attestation": { "type": "string", "description": "One-time attestation code, when the issuer requires codes." }
+        }
+      },
+      "IssueResponse": {
+        "type": "object",
+        "required": ["blindSignatures", "remaining"],
+        "properties": {
+          "blindSignatures": { "type": "array", "items": { "type": "string", "description": "Blind signature, base64." } },
+          "remaining": { "type": "integer", "description": "Tokens left in today's quota." }
+        }
+      }
+    }
+  }
+}

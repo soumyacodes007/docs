@@ -1,0 +1,64 @@
+---
+title: "Record envelope"
+description: "The signed, padded payload format that lets anyone check a relayer did not tamper with a record."
+keywords:
+  - "envelope"
+  - "EIP-191"
+  - "tamper detection"
+  - "padding"
+---
+
+Every Arkognito record's payload is a small JSON envelope around the app's own data:
+
+```json
+{
+  "v": 1,
+  "app": "my-app",
+  "ct": "application/json",
+  "exp": 86400,
+  "enc": 0,
+  "data": "eyJtZWRpY2luZSI6InBhcmFjZXRhbW9sIn0=",
+  "sig": "0x…",
+  "pad": "0000…"
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `v` | Format version, `1` |
+| `app` | The app the record belongs to |
+| `ct` | The app's own content type (the entity's content type is always `application/json`) |
+| `exp` | Lifetime in seconds, rounded up to a bucket |
+| `enc` | `1` when `data` is encrypted to the owner |
+| `data` | The app's payload, base64 |
+| `sig` | The one-time owner's signature |
+| `pad` | Zeros that bring the envelope to a fixed size |
+
+## The signature
+
+`sig` is the one-time owner's EIP-191 signature over:
+
+```text
+keccak256(abi.encode(
+  "arkognito/envelope/v1", app, ct, uint64 exp, uint8 enc, data, canonicalAttributes))
+```
+
+`canonicalAttributes` is a deterministic encoding of the record's on-chain attributes. Because the
+signature covers the data, the attributes, the lifetime and the encryption flag, a relayer that
+changes any of them, or hands the record to a different owner, produces a record whose signature no
+longer recovers to `$owner`. Anyone can check this with `verifyRecord()`.
+
+A reader also checks that the record's on-chain lifetime (`$expiresAt - $createdAt`) matches `exp`
+within 30 blocks, so a relayer cannot quietly shorten or extend a record.
+
+## Fixed sizes and lifetimes
+
+- **Size:** the envelope is padded to exactly 512, 1024, 4096 or 16384 bytes. The bucket is chosen
+  as if the payload were encrypted, so encrypted and plain records of the same input are the same
+  size. Records larger than 16 KB are refused.
+- **Lifetime:** rounded up to 1 hour, 1 day, 7 days, 30 days or 90 days. Longer is refused.
+
+Odd sizes and odd lifetimes would otherwise act as fingerprints. See
+[fingerprinting](/concepts/fingerprinting).
+
+The exact byte layout is in the [protocol reference](/reference/protocol).

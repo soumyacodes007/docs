@@ -1,0 +1,82 @@
+---
+title: "Prove ownership"
+description: "Show one verifier that one record is yours, without revealing your other records."
+keywords:
+  - "proveOwnership"
+  - "verifyOwnershipProof"
+  - "selective disclosure"
+---
+
+Sometimes a user needs to show that a particular record is theirs: claiming a reward for a report,
+proving a booking at a counter, or linking one record to an account on purpose. An ownership proof
+reveals exactly one record, to one verifier, for one challenge, until a deadline.
+
+{/* DIAGRAM: ownership-proof
+    File: /images/diagrams/ownership-proof.png
+    Show: Verifier sends a random challenge -> user's app calls proveOwnership(entityKey) -> the key
+    worker signs { entityKey, challenge, verifier, expiresAt } with that record's one-time key ->
+    verifier checks the signature and reads $owner of that entity from Arkiv. Other records stay unlinked. */}
+
+## Flow
+
+<Steps>
+<Step title="The verifier issues a challenge">
+
+The verifier picks a random, single-use challenge and names itself:
+
+```ts
+const challenge = crypto.randomUUID()
+const verifier = "kendra-desk-14"
+```
+
+</Step>
+<Step title="The user proves one record">
+
+```ts
+const proof = await ark.proveOwnership(entityKey, { challenge, verifier, ttlSeconds: 300 })
+```
+
+`proof` is plain JSON:
+
+```json
+{
+  "entityKey": "0x334c…bb805",
+  "owner": "0x0C9E…68C5c",
+  "challenge": "7f1c2a…",
+  "verifier": "kendra-desk-14",
+  "expiresAt": 1791640000,
+  "chainId": 7738577,
+  "signature": "0x…"
+}
+```
+
+</Step>
+<Step title="The verifier checks it">
+
+```ts
+import { verifyOwnershipProof } from "arkognito"
+
+const result = await verifyOwnershipProof(proof, { challenge, verifier: "kendra-desk-14", client: publicClient })
+if (!result.ok) throw new Error(result.reason)
+```
+
+</Step>
+</Steps>
+
+## What the verifier checks
+
+- the challenge is the one it issued, and the proof names this verifier;
+- `expiresAt` (unix seconds) has not passed;
+- the EIP-712 signature recovers to `owner`;
+- on Arkiv, the entity's current `$owner` is that address (so the record still exists).
+
+A proof for one verifier cannot be replayed to another, and an expired or reused challenge fails.
+
+## What it reveals
+
+The verifier learns that the holder of the proof controls that record's one-time owner. It learns
+nothing about the user's other records: each has a different owner, and nothing links them. If the
+user proves several records to the same verifier, the verifier can of course link those.
+
+`proveOwnership` finds the record's key through `myEntities()` if needed, so it works on any
+device signed in with the same wallet.

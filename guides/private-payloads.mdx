@@ -1,0 +1,51 @@
+---
+title: "Encrypt payloads and use scopes"
+description: "Keep private content private, and group records under one owner on purpose."
+keywords:
+  - "encrypt"
+  - "scope"
+  - "Arkognito payload encryption"
+---
+
+## Encrypted payloads
+
+Arkiv expiry hides a record from queries, but the payload stays readable in the transaction that
+created it. Anything that must stay private needs encryption, not just a short lifetime.
+
+```ts
+await ark.createEntity({
+  payload: new TextEncoder().encode("refill: insulin, 2 pens"),
+  contentType: "text/plain",
+  attributes: { type: "note" },
+  expires: ExpirationTime.fromDays(7),
+  encrypt: true,
+})
+
+const [note] = await ark.myEntities({ where: { type: "note" } })
+note.toText() // "refill: insulin, 2 pens"
+```
+
+- The payload is encrypted with AES-256-GCM under a key derived from your root key and this
+  record's one-time key. Only the same wallet, in the same app, can decrypt it, on any device.
+- Encrypted and plain records of the same input land in the **same size bucket**: padding always
+  reserves room for encryption, so using `encrypt` does not make a record stand out.
+- **Attributes are never encrypted.** They are what queries match on. Keep them coarse.
+- The envelope signature covers the ciphertext, so tampering is still detected by anyone.
+
+Sharing an encrypted record with someone else is not supported in this version.
+
+## Scopes: one owner on purpose
+
+By default every record gets a new owner. A **scope** makes all records written in it share one
+owner, deliberately linking them, for example a public profile or a thread you want to be visibly
+the same author:
+
+```ts
+await ark.createEntity({ ...profileUpdate, scope: "public-profile" })
+await ark.createEntity({ ...anotherUpdate, scope: "public-profile" })
+
+const profileAddress = await ark.scopeAddress("public-profile")
+```
+
+Records in a scope are linked to each other, not to your wallet or to your other records. Use one
+scope per thing you want to be recognisable, and no scope for everything else.

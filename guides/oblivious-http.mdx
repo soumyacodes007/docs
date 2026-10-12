@@ -1,0 +1,58 @@
+---
+title: "Hide your IP with Oblivious HTTP"
+description: "Send relayer requests through an OHTTP relay so no single party sees both your IP and your records."
+keywords:
+  - "Oblivious HTTP"
+  - "OHTTP"
+  - "RFC 9458"
+---
+
+Without help, a relayer sees the IP address each request came from, and could note which IP sent
+which record. Oblivious HTTP splits that knowledge between two parties:
+
+- the **OHTTP relay** sees your IP, but every request is encrypted to the relayer, so it cannot read it;
+- the **relayer** reads the request, but it only ever sees the OHTTP relay's IP.
+
+As long as the two are run by different people, neither can tie your IP to your records.
+
+{/* DIAGRAM: ohttp
+    File: /images/diagrams/ohttp.png
+    Show: Browser -> (encrypted to relayer key) -> OHTTP relay [sees: IP, not content] -> relayer
+    [sees: content, not IP] -> Arkiv. The relayer's gateway key comes from its heartbeat entity on Arkiv. */}
+
+## Use it
+
+```ts
+const ark = await createPrivateClient({
+  app: "my-app",
+  wallet,
+  ohttpRelay: "https://ohttp.example.org",
+})
+```
+
+Every relayer call (info, submit, status polling) then goes through the relay. Nothing else
+changes.
+
+## Where the keys come from
+
+Each relayer publishes its OHTTP gateway key in its heartbeat entity on Arkiv. The client reads
+the key from Arkiv, never from the relay, so a relay cannot substitute its own key.
+
+Anyone can publish a heartbeat claiming any URL. The client tries every key claimed for a relayer's
+URL; only the real relayer can decrypt, and its answer must name the address that created that
+heartbeat. A squatter's key simply fails.
+
+## Choosing an OHTTP relay
+
+- **Operated by someone else.** If the same team runs the relay and the relayer, OHTTP protects
+  nothing.
+- **https.** Relays forward only to https relayers on public hosts that they can verify.
+- **Logs off.** The reference relay keeps no logs; check the operator's proxy does the same.
+
+Running one is a single container: see [run an OHTTP relay](/operations/ohttp-relay).
+
+<Note>
+  OHTTP hides your IP from relayers. Your Arkiv RPC provider still sees your IP when the SDK reads
+  Arkiv; it never sees which records are yours (see [read records](/guides/read-records)). To hide
+  it too, pass your own `publicClient` whose transport goes through a VPN, Tor or an RPC you run.
+</Note>

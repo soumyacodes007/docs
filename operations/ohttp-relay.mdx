@@ -1,0 +1,72 @@
+---
+title: "Run an OHTTP relay"
+description: "Host the Oblivious HTTP relay that hides users' IP addresses from relayers."
+keywords:
+  - "OHTTP relay"
+  - "Oblivious HTTP"
+  - "operator"
+---
+
+An OHTTP relay forwards encrypted requests from clients to relayers. It sees client IP addresses
+but cannot read requests; relayers read requests but only see the relay's address. It is only
+useful if it is run by **someone other than the relayer operators**, which makes it a good way for
+another team to contribute to the network.
+
+## Run it
+
+<Tabs>
+<Tab title="Docker">
+
+```bash
+docker run -d --restart always -p 8790:8790 -e ROLE=ohttp-relay -e PORT=8790 \
+  $(docker build -q https://github.com/soumyacodes007/Arkognito.git)
+```
+
+</Tab>
+<Tab title="Node">
+
+```bash
+git clone https://github.com/soumyacodes007/Arkognito.git && cd Arkognito
+npm ci && npm run build
+npm run ohttp-relay
+```
+
+</Tab>
+<Tab title="Railway">
+
+Deploy the repository as a service with `ROLE=ohttp-relay` and `PORT=8790`, and a domain with
+target port 8790.
+
+</Tab>
+</Tabs>
+
+It holds no keys and no state, and writes nothing to Arkiv. Put it behind HTTPS.
+
+## What it forwards
+
+The relay accepts `POST /ohttp` with an `x-arkognito-target` header naming a relayer, and forwards
+only the encrypted body to `<target>/v1/ohttp`. It forwards to a target only if:
+
+- the target is announced in a live `arkognito.relayer` heartbeat on Arkiv that publishes a gateway key;
+- the target uses **https** on a **public** host (loopback, private and link-local addresses are refused);
+- the target answers `/v1/info` with the heartbeat creator's address and the same gateway key;
+- no redirects are followed.
+
+A fake heartbeat naming an internal address (for example a cloud metadata endpoint) therefore
+cannot turn the relay into a proxy into your network.
+
+## Configuration
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `ROLE` | `relayer` | Set to `ohttp-relay` |
+| `PORT` / `OHTTP_RELAY_PORT` | 8790 | Listening port |
+| `OHTTP_TARGETS` | — | Comma-separated explicit allowlist; skips heartbeat discovery |
+| `OHTTP_ALLOW_LOCAL` | off | Allow `http://` and private targets. Local development only |
+| `ARKIV_RPC_URL`, `ARKIV_ACCESS_KEY` | public Tiramisu RPC | Used to read heartbeats |
+
+## Operating it
+
+- `GET /healthz` returns `{ ok, role, targets }`, where `targets` is the number of verified relayers.
+- The relay keeps no logs. Disable access logs in any proxy in front of it.
+- Request bodies are limited to 128 KB.

@@ -1,0 +1,85 @@
+---
+title: "Configuration"
+description: "Every environment variable of the relayer, token issuer and OHTTP relay."
+keywords:
+  - "configuration"
+  - "environment variables"
+  - "relayer settings"
+---
+
+Services read environment variables, and a `.env` file in the working directory when present. One
+image serves every role; `ROLE` picks it.
+
+## Role
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `ROLE` | `relayer` | `relayer` or `ohttp-relay`. Also accepted as the first argument: `tsx start.ts ohttp-relay`. |
+
+## Relayer
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `RELAYER_PRIVATE_KEY` | — | The relayer's wallet key. One wallet per relayer, never shared. |
+| `RELAYER_KEY_VAR` | `RELAYER_PRIVATE_KEY` | Read the key from another variable (Compose uses `RELAYER_1_PRIVATE_KEY`). Without it, an empty `RELAYER_PRIVATE_KEY` falls back to `RELAYER_1_PRIVATE_KEY`. |
+| `RELAYER_NAME` | `relay` | Log prefix |
+| `PORT` | `8787` | Listening port |
+| `RELAYER_PUBLIC_URL` | `http://localhost:$PORT` | URL announced in the heartbeat. Must be https in production. |
+| `ARKIV_RPC_URL` | Tiramisu public RPC | Arkiv RPC endpoint |
+| `ARKIV_ACCESS_KEY` | — | Arkiv Hub key, sent as `X-API-KEY` |
+| `MIN_BATCH` | `5` | Records that trigger a write |
+| `MAX_WAIT_MS` | `60000` | Write anyway after the oldest record has waited this long |
+| `MIN_INTERVAL_BLOCKS` | `5` | Never write batches closer together than this |
+| `MAX_BATCH` | `40` | Largest batch |
+| `MAX_QUEUE` | `5000` | Queue cap; further submissions get `503` |
+| `RATE_LIMIT_PER_MIN` | `30` | Submissions per minute per address, tokens off only, kept in memory |
+| `MAX_MIN_ANONYMITY` | `50` | Largest `minAnonymity` a client may ask for |
+| `MAX_HOLD_MS` | `1800000` | Longest a client may ask the relayer to hold a record |
+| `OHTTP` | `on` | Accept Oblivious HTTP requests; the gateway key derives from the relayer key |
+| `HEARTBEAT` | `on` | Publish the discovery heartbeat |
+| `HEARTBEAT_EVERY_MS` | `120000` | Heartbeat renewal interval (the entity lives 150 blocks) |
+| `LOW_BALANCE_GLM` | `0.2` | Log `LOW BALANCE` below this |
+
+## Tokens
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `REQUIRE_TOKENS` | `off` | `on` to require a blind token per record |
+| `ISSUER_WALLET_ADDRESS` | — | Issuer whose daily keys this relayer accepts (when it does not run the issuer) |
+| `ISSUER_URL` | — | Issuer's base URL, given to clients in `/v1/info` |
+
+## Issuer
+
+Runs inside a relayer.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `ISSUER` | `off` | `on` to run the issuer in this relayer. Its URL defaults to `RELAYER_PUBLIC_URL`. |
+| `ISSUER_WALLET_PRIVATE_KEY` | — | Wallet that publishes daily issuer keys |
+| `ISSUER_RSA_SEED` | — | 32 bytes as `0x`-hex; daily RSA keys derive from it. Never change it mid-day. |
+| `TOKENS_PER_DAY` | `5` | Tokens per wallet (or per attestation code) per app per UTC day |
+| `ISSUER_QUOTA_FILE` | — | File that keeps quotas across restarts. Entries are HMACs and name no wallet. |
+| `ISSUER_CODES_FILE` | — | File of sha256 hashes (hex, one per line) of one-time attestation codes. When set, tokens require a code. |
+
+## OHTTP relay
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PORT` / `OHTTP_RELAY_PORT` | `8790` | Listening port (`OHTTP_RELAY_PORT` wins) |
+| `OHTTP_TARGETS` | — | Comma-separated allowlist of relayer URLs. Without it, targets are verified heartbeat relayers. |
+| `OHTTP_ALLOW_LOCAL` | `off` | Allow `http://` and private or loopback targets. Local development only. |
+| `ARKIV_RPC_URL`, `ARKIV_ACCESS_KEY` | public RPC | Used to read heartbeats |
+
+## Docker Compose
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `RELAY_1_PUBLIC_URL` | `http://localhost:8787` | relay-1's public URL (and the issuer URL) |
+| `RELAY_2_PUBLIC_URL` | `http://localhost:8788` | relay-2's public URL |
+| `RELAYER_1_PRIVATE_KEY`, `RELAYER_2_PRIVATE_KEY`, `ISSUER_WALLET_PRIVATE_KEY`, `ISSUER_RSA_SEED` | — | Created by `npm run setup` |
+
+## Platform variables
+
+| Variable | Where | Meaning |
+| --- | --- | --- |
+| `RAILWAY_RUN_UID=0` | Railway, services with a volume | Run as root so the volume (mounted as root) is writable |

@@ -1,0 +1,65 @@
+---
+title: "Blind tokens"
+description: "Rate limits per person, without the relayer learning who wrote which record."
+keywords:
+  - "RSA blind signatures"
+  - "RFC 9474"
+  - "Privacy Pass"
+  - "rate limiting"
+---
+
+Relayers pay gas, so they need rate limits. Arkognito uses RSA blind signatures
+([RFC 9474](https://www.rfc-editor.org/rfc/rfc9474.html), `RSABSSA-SHA384-PSS-Randomized`): the
+issuer signs tokens without seeing them, so a token spent later cannot be traced back to the wallet
+that received it.
+
+{/* DIAGRAM: blind-tokens
+    File: /images/diagrams/blind-tokens.png
+    Show: at session start: client blinds 5 random messages -> issuer (sees wallet + count) signs blind
+    -> client unblinds. Later, separately: client spends one token with each record -> relayer (sees
+    token, not wallet) checks signature + spent list on Arkiv -> writes record + spent marker in one tx. */}
+
+## Who sees what
+
+| | Sees | Never sees |
+| --- | --- | --- |
+| Issuer | Your wallet, how many tokens it took, when | Which records those tokens paid for |
+| Relayer | The token you spend with each record | Your wallet |
+| Arkiv | A spent marker with a random id per token | Anything linking markers to wallets |
+
+We tested this by trying: with the issuer's secret key and both the issuer's and the relayer's
+logs, every issued token was equally consistent with every redeemed one, so the true pairing is
+indistinguishable.
+
+## The flow
+
+1. **Issuer key.** One RSA-2048 key per app per UTC day, published on Arkiv as an
+   `arkognito.issuerKey` entity by the issuer's wallet. Clients and relayers read it from Arkiv,
+   never from HTTP.
+2. **Issuance.** At session start the client prepares random messages, blinds them, and sends them
+   with a signature from the user's wallet. The issuer checks the wallet's daily quota and signs.
+3. **Redemption.** Each write carries one unblinded token. The relayer verifies it, refuses it if
+   its id is already on the spent list, and writes an `arkognito.spent` marker in the same
+   transaction as the record.
+
+## Defences
+
+- **Key consistency.** An issuer could give one user a unique key and recognise their tokens. Only
+  one key per app per day is valid; if two exist on Arkiv, clients and relayers refuse that issuer.
+- **Timing.** Tokens are fetched at session start, spent oldest first, and never before they are
+  60 seconds old, so issuance and redemption do not sit next to each other.
+- **Double spending.** The spent list on Arkiv is shared by all relayers and checked at redemption
+  and again right before writing. Two relayers could still accept the same token in the same block;
+  relayers scan the list and report any token recorded twice.
+- **Restarts.** The issuer's daily keys derive from a secret seed, so a restarted issuer recreates
+  the same key instead of publishing a second one. Quotas can be kept in a file keyed by HMAC, so it
+  names no wallet.
+- **Day boundary.** Tokens from the previous UTC day are accepted for the first hour of a new day.
+
+## Limits
+
+- **Per wallet is not per person.** Wallets are free. Issuers can require one-time
+  [attestation codes](/guides/rate-limit-tokens#attestation-codes) to limit people instead.
+- **Tokens can be shared or sold.** Daily expiry keeps the damage small.
+- **Issuer and relayer run by one team** could compare IPs at issuance and redemption, unless
+  redemption goes through an [OHTTP relay](/guides/oblivious-http).

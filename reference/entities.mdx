@@ -1,0 +1,47 @@
+---
+title: "Entities"
+description: "Every Arkiv entity Arkognito writes, its attributes, payload and lifetime, and the queries behind each claim."
+keywords:
+  - "Arkiv entities"
+  - "schema"
+  - "arkognito.relayer"
+  - "arkognito.spent"
+---
+
+Arkognito writes four kinds of entity to Arkiv. Attribute names are lowercase: the Arkiv node
+rejects uppercase. Its own entities carry `project = "arkognito-7f3k"`.
+
+| Type | Owner | Creator | Attributes | Payload | Lifetime |
+| --- | --- | --- | --- | --- | --- |
+| App record (any schema) | A one-time address `S` | A relayer | The app's own, plus `project` (the app's project) and `vtag` (59-character encrypted key reference) | Envelope, padded to 512 B, 1 KB, 4 KB or 16 KB, optionally encrypted | The app's choice, rounded up to 1 h, 1 d, 7 d, 30 d or 90 d |
+| `arkognito.issuerKey` | Issuer wallet | Issuer wallet | `project`, `type`, `app`, `epoch` (i32, UTC day) | `{ spki, scheme }`: RSA-2048 public key | End of the day + 2 days |
+| `arkognito.spent` | Relayer | Relayer | `project`, `type`, `app`, `epoch` (i32), `tokenid` (bytes32, sha256 of the prepared token message) | Empty | End of the token's day + 1 day |
+| `arkognito.relayer` | Relayer | Relayer | `project`, `type`, `version`, `url`, `minbatch` (i32), `tokens` (bool), `ohttpkey` (bytes32, OHTTP gateway key) | `{ url, version }` | 150 blocks (about 5 minutes), extended every 2 minutes |
+
+## Record envelope
+
+```json
+{ "v": 1, "app": "...", "ct": "<app content type>", "exp": 2592000, "enc": 0, "data": "<base64>", "sig": "0x...", "pad": "000..." }
+```
+
+`sig` is the one-time owner's EIP-191 signature over
+`keccak256(abi.encode("arkognito/envelope/v1", app, ct, uint64 exp, uint8 enc, data, canonicalAttributes))`.
+Readers check that it recovers to `$owner` and that `$expiresAt - $createdAt` matches `exp` within
+30 blocks. Details: [record envelope](/concepts/record-envelope) and [protocol](/reference/protocol#envelope).
+
+## Queries behind each claim
+
+| Claim | Query |
+| --- | --- |
+| Without Arkognito, one query lists a wallet's records | `project = str('arkognito-demo-sketch') AND $owner = addr(<wallet>)` |
+| With Arkognito, each owner holds one record | The same query on any one-time owner returns 1; on the user's wallet it returns 0 |
+| Arkognito records share one creator | `project = str(<app>) AND $creator = addr(<relayer>)` |
+| `myEntities()` reads | `project = str(<app>)` pinned with `atBlock`, selecting key, owner, creator, createdAt and attributes; tags opened locally; then `… AND $createdAt = u64(<block>) AND $creator = addr(<relayer>)` per batch, plus 2 cover batches |
+| Today's issuer key | `project = str('arkognito-7f3k') AND type = str('arkognito.issuerKey') AND app = str(<app>) AND epoch = <day>`, created by the issuer. More than one result means equivocation. |
+| A token is already spent | `project = str('arkognito-7f3k') AND type = str('arkognito.spent') AND tokenid = bytes32(<id>)` |
+| Live relayers | `project = str('arkognito-7f3k') AND type = str('arkognito.relayer')`; trust only each entity's `$creator` |
+
+## Explorer
+
+Tiramisu entities can be inspected at
+`https://indexer.tiramisu.db-chain.testnet.arkiv.network/entity/<entity key>`.

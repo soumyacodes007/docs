@@ -1,0 +1,174 @@
+---
+title: "Architecture"
+description: "How the SDK, relayers, token issuer, OHTTP relay and Arkiv fit together, and where each trust boundary lies."
+sidebarTitle: "Overview"
+mode: "wide"
+keywords:
+  - "Arkognito architecture"
+  - "unlinkable ownership"
+  - "relayer"
+  - "Arkiv"
+---
+
+Arkognito is a client SDK plus three small open-source services. All shared state lives on Arkiv:
+relayer discovery, issuer keys and the spent-token list are Arkiv entities, so there is no database,
+no central operator and nothing that only one company can run.
+
+<Warning>
+  Experimental, testnet only (Arkiv Tiramisu). The protocol is version 0.x and has not had an
+  outside audit.
+</Warning>
+
+## On this page
+
+- [System overview](#system-overview)
+- [Keys](#keys)
+- [Write path](#write-path)
+- [Read path](#read-path)
+- [Rate-limit tokens](#rate-limit-tokens)
+- [Oblivious HTTP](#oblivious-http)
+- [Discovery](#discovery)
+- [Failure handling](#failure-handling)
+- [Deployment](#deployment)
+- [Delivery boundary](#delivery-boundary)
+
+## System overview
+
+{/* DIAGRAM: system-overview
+    File: /images/diagrams/system-overview.png
+    Show: the user's browser (app + arkognito SDK + key worker), optional OHTTP relay, relayers
+    (relay-1 with issuer, relay-2), and Arkiv Tiramisu holding: app records (owner S, creator relayer),
+    arkognito.relayer heartbeats, arkognito.issuerKey, arkognito.spent. Mark each trust boundary. */}
+
+| Component | Responsibility | Trust boundary |
+| --- | --- | --- |
+| **SDK** (`arkognito`) | Derives keys, seals and pads records, verifies everything relayers return, finds records privately, proofs, tokens, OHTTP | Runs with the user. Keys stay in a Web Worker in browsers. |
+| **Relayer** | Validates, batches, shuffles and writes records; transfers each to its owner; pays gas; publishes a heartbeat | Sees records and request times. Cannot forge or redirect a record without detection. |
+| **Token issuer** | Publishes one RSA key per app per day on Arkiv; blind-signs tokens within quota | Sees wallets and token counts, never which records tokens paid for. |
+| **OHTTP relay** | Forwards encrypted requests to verified relayers | Sees IPs, never contents. Must be a different operator than the relayers. |
+| **Arkiv** | Stores records and all shared state | Public: every field is readable by anyone. |
+
+## Keys
+
+{/* DIAGRAM: key-derivation
+    File: /images/diagrams/key-derivation.png
+    (Same diagram as on the One-time owners page.) */}
+
+- The wallet signs one EIP-712 message per app (`"arkognito key v1"`, app, chain id), twice to check
+  it is deterministic.
+- HKDF derives a **root key**, which never leaves the key worker.
+- Each record gets a **fresh random 15-byte id**; its one-time key and owner `S` derive from the root
+  and the id. No counters: nothing is reused after expiry, devices never collide.
+- Each record carries an **encrypted tag** naming its id. Only the root opens it.
+- One-time keys sign only envelopes and ownership proofs.
+
+[One-time owners](/concepts/one-time-owners)
+
+## Write path
+
+{/* DIAGRAM: write-path
+    File: /images/diagrams/write-path.png
+    (Same diagram as on the Relayers and batching page.) */}
+
+1. **Check.** `check()` flags identifying attributes; the rarity check compares against the app's
+   records; `strict` turns warnings into refusals.
+2. **Seal.** The SDK takes a fresh key and tag, optionally encrypts the payload, and builds the
+   [envelope](/concepts/record-envelope): signed by `S`, padded to a size bucket, lifetime rounded to
+   a bucket.
+3. **Wait and submit.** A random 0–20 s delay, one write in flight per user (across tabs), a
+   rate-limit token if required, optionally through OHTTP.
+4. **Relayer validates** the request (padding, buckets, lowercase attribute names, signature) and
+   redeems the token against the shared spent list.
+5. **Batch.** When `k` records are queued or the max wait expires, and at least 5 blocks after the
+   last batch, the relayer shuffles the batch and sends one `executeBatch`: creates, spent markers
+   (shuffled separately), and an ownership transfer of each record to its `S`.
+6. **Verify.** The client reads the whole batch back and checks the signature and owner. A
+   mismatch marks the relayer bad and retries elsewhere.
+
+## Read path
+
+{/* DIAGRAM: read-path
+    File: /images/diagrams/read-path.png
+    (Same diagram as on the Finding your records page.) */}
+
+1. **List** the app pinned to one block: keys, owners, attributes, no payloads. Every user downloads
+   the same list.
+2. **Open tags** locally. Tags that open are yours; each names a key whose address must equal the
+   record's owner.
+3. **Fetch whole batches** that hold your records, plus two random cover batches, and verify.
+
+The RPC provider never sees a query that names your record or address.
+[Finding your records](/concepts/finding-your-records)
+
+## Rate-limit tokens
+
+{/* DIAGRAM: blind-tokens
+    File: /images/diagrams/blind-tokens.png
+    (Same diagram as on the Blind tokens page.) */}
+
+- **Issuance** at session start: blinded messages, a wallet signature, a per-wallet (or per
+  attestation code) daily quota.
+- **Redemption** per write: the relayer verifies the unblinded token against the day's key from
+  Arkiv and writes an `arkognito.spent` marker in the same transaction.
+- **Key consistency:** one key per app per day; two on Arkiv and everyone refuses the issuer.
+- **Timing:** tokens fetched at session start, oldest first, at least 60 s old when spent.
+- **Double spend:** checked at redemption and before writing; a monitor reports any id recorded twice.
+
+[Blind tokens](/concepts/blind-tokens)
+
+## Oblivious HTTP
+
+{/* DIAGRAM: ohttp
+    File: /images/diagrams/ohttp.png
+    (Same diagram as on the Hide your IP page.) */}
+
+- The client encrypts each relayer request to the relayer's gateway key (HPKE, RFC 9458 §4) and sends
+  it to an OHTTP relay run by someone else.
+- Gateway keys come from heartbeats on Arkiv. For a URL several heartbeats claim, the client accepts
+  only the key whose decrypted answer names that heartbeat's creator.
+- The relay forwards only to https relayers on public hosts that answer `/v1/info` with the heartbeat
+  creator's address and key, and follows no redirects.
+
+[Hide your IP](/guides/oblivious-http)
+
+## Discovery
+
+- Each relayer keeps an `arkognito.relayer` heartbeat entity (150 blocks, renewed every 2 minutes)
+  with its URL, batch size, token requirement and OHTTP key. A dead relayer drops out on its own.
+- A relayer's address is the heartbeat's `$creator`; nothing else in the heartbeat is trusted alone.
+- On restart a relayer patches its heartbeat with its current settings.
+
+## Failure handling
+
+| Failure | Handling |
+| --- | --- |
+| Relayer edits or redirects a record | Client verification fails; relayer marked bad; retry elsewhere |
+| Relayer drops or stalls | Timeout only while the queue position stops improving; failover |
+| Relayer writes, then crashes before answering | Client finds its own tag on Arkiv; `recovered: true`, nothing written twice |
+| Stale key prediction | Relayer re-predicts and resends (up to 3 times) |
+| One invalid record in a batch | Batch split in halves and retried |
+| Quiet hour | Batch written after max wait with its real size reported, or refused under `minAnonymity` |
+| Same token at two relayers | Spent list checked twice; post-hoc monitor reports duplicates |
+| Issuer restarts | Same daily key from the seed; quotas from an HMAC-keyed file |
+| Relayer out of gas | `LOW BALANCE` logged; `/healthz` reports the balance |
+| Block lands while paging | Page-throughs pinned to one block |
+
+## Deployment
+
+{/* DIAGRAM: deployment
+    File: /images/diagrams/deployment.png
+    (Same diagram as on the Self-hosting page.) */}
+
+One container image serves every role (`ROLE=relayer` or `ROLE=ohttp-relay`). The reference stack
+is two relayers (one also runs the issuer, with a volume for its quota file) and an OHTTP relay,
+behind HTTPS. It runs with Docker Compose, on Railway or Fly, or as plain Node processes.
+[Self-hosting](/operations/self-hosting)
+
+## Delivery boundary
+
+**Built and tested on Tiramisu:** the SDK (browser and Node), relayer, token issuer, OHTTP relay,
+Docker Compose stack, unit, browser and on-chain test suites, and the linkage experiment.
+
+**Not yet:** an outside security audit; mainnet; public hosted relayers; smart-contract wallets;
+updating or deleting records from one-time owners (they hold no gas); sharing encrypted records with
+other people; an index service for very large apps.

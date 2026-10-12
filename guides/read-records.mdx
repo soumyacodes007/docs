@@ -1,0 +1,112 @@
+---
+title: "Read records"
+description: "Find your own records privately, and read and verify everyone else's."
+keywords:
+  - "myEntities"
+  - "verifyRecord"
+  - "Arkognito read"
+---
+
+There are two kinds of reads: a user finding **their own** records, and an app showing **public**
+records written by many users.
+
+## Your own records: `myEntities()`
+
+```ts
+const mine = await ark.myEntities()
+const sketches = await ark.myEntities({ where: { type: "sketch" } })
+
+for (const r of sketches) {
+  console.log(r.key, r.owner, r.toJson())
+}
+```
+
+Each result is a verified record:
+
+| Field | Meaning |
+| --- | --- |
+| `key` / `entityKey` | Entity key |
+| `owner` | The one-time owner (yours) |
+| `creator` | The relayer that wrote it |
+| `data`, `toText()`, `toJson()` | The payload, already decrypted if it was written with `encrypt: true` |
+| `contentType` | Your original content type |
+| `attributes` | The record's attributes |
+| `createdAt`, `expiresAt` | Block numbers |
+| `ref` | Which of your keys owns it (used by `proveOwnership`) |
+
+Results are newest first. `where` filters on attribute values locally.
+
+### Why it is private
+
+`myEntities()` never sends your addresses or record keys to the RPC provider:
+
+1. It downloads the app's list of records (keys, owners, attributes, no payloads), the same list
+   every user downloads.
+2. It opens each record's encrypted tag locally (in the key worker in a browser). Only your root
+   key can open your tags.
+3. It fetches full records **by whole batch**, plus two random batches as cover. The RPC provider
+   learns "this client cares about a record in one of these batches", never which one.
+
+The cost grows with the size of the app: about 1–3 seconds for a few hundred records in our tests.
+See [finding your records](/concepts/finding-your-records).
+
+### Works on any device
+
+Nothing is stored locally. Sign in with the same wallet on another device and `myEntities()`
+finds every record. Losing the wallet means losing the ability to find and prove your records
+(they stay on Arkiv until they expire).
+
+## Everyone's records: normal Arkiv queries
+
+Records are ordinary Arkiv entities, so public reads do not change: query by the app's `project`
+attribute and your own attributes as usual. The payload is an
+[envelope](/concepts/record-envelope); verify it and unwrap the data with `verifyRecord`:
+
+```ts
+import { createPublicClient } from "@arkiv-network/sdk"
+import { tiramisu } from "@arkiv-network/sdk/chains"
+import { eq } from "@arkiv-network/sdk/query"
+import { http } from "viem"
+import { verifyRecord } from "arkognito"
+
+const client = createPublicClient({ chain: tiramisu, transport: http() })
+
+const { entities } = await client
+  .select({ key: true, owner: true, creator: true, payload: true, attributes: true, createdAt: true, expiresAt: true })
+  .where(eq("project", "my-app"), eq("type", "stock-report"))
+  .limit(200)
+  .fetch()
+
+for (const e of entities) {
+  const v = await verifyRecord(e, { app: "my-app" })
+  if (!v.ok) continue // edited by a relayer, wrong owner, or not an Arkognito record
+  const report = JSON.parse(new TextDecoder().decode(v.record.data))
+}
+```
+
+`verifyRecord` checks that the record's signature recovers to its `$owner` over the on-chain
+attributes, and that its lifetime matches the signed one. A relayer that changed a single byte is
+rejected. Pass `relayers: [addresses]` to accept records from known relayers only.
+
+<Note>
+  Records written with `encrypt: true` verify, but their `data` is ciphertext to everyone except
+  the owner.
+</Note>
+
+<Warning>
+  Never query `ownedBy(yourOneTimeAddress)` or `$owner = addr(...)` for your own records from a
+  client. It tells the RPC provider which addresses are yours. Use `myEntities()`.
+</Warning>
+
+## Paging large result sets
+
+Arkiv cursors are tied to the block they were read at. If a block lands while you page, the next
+page fails. Pin the page-through to one block:
+
+```ts
+const head = await client.getBlockNumber()
+const query = client.select({ key: true }).where(eq("project", "my-app")).limit(200).atBlock(head)
+for await (const e of query) {
+  // ...
+}
+```

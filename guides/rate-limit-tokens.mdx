@@ -1,0 +1,64 @@
+---
+title: "Rate-limit tokens"
+description: "How apps use relayers that limit writes per person without knowing who writes what."
+keywords:
+  - "blind tokens"
+  - "rate limit"
+  - "RFC 9474"
+---
+
+A relayer pays gas for every record, so it needs to limit how much each person writes. If it
+limited by wallet, it would learn which wallet wrote which record. Instead, relayers can require a
+**blind token** per write: the issuer sees your wallet when it hands out tokens, the relayer sees a
+token when you spend it, and neither can connect the two. See [blind tokens](/concepts/blind-tokens)
+for how.
+
+## In an app: nothing to do
+
+When a relayer requires tokens, `createPrivateClient` fetches the day's tokens with the user's
+wallet as soon as the client is created, and spends one per write:
+
+```ts
+const ark = await createPrivateClient({ app: "my-app", wallet }) // fetches tokens if needed
+await ark.createEntity({ ... })                                  // spends one
+```
+
+What the user notices:
+
+- **One extra signature at connect**, asking for tokens (on top of the two key signatures).
+- **A daily limit.** The default is 5 writes per wallet per app per day; operators can raise it.
+- **The first write right after connecting can wait up to 60 seconds.** A token is never spent
+  until it is 60 seconds old, so fetching and spending never sit next to each other in time.
+
+## Keep tokens across sessions
+
+By default tokens live in memory. In a browser, keep them in `localStorage` so a session can spend
+tokens fetched in an earlier one (better privacy, and no wait):
+
+```ts
+import { browserTokenStore, createPrivateClient } from "arkognito"
+
+const ark = await createPrivateClient({ app: "my-app", wallet, tokenStore: browserTokenStore() })
+```
+
+## Attestation codes
+
+A per-wallet quota limits wallets, not people, and wallets are free. An issuer can instead require
+a one-time **attestation code** (for example, printed on a receipt or handed out at a counter).
+Each code grants one day's quota:
+
+```ts
+const ark = await createPrivateClient({ app: "my-app", wallet, tokenAttestation: "KENDRA-9F2C" })
+```
+
+The issuer learns which wallet used which code; it still never learns which records the tokens paid
+for. Operators: see `ISSUER_CODES_FILE` in the [configuration reference](/reference/configuration).
+
+## Errors
+
+| Message | Meaning |
+| --- | --- |
+| `no rate-limit token left for today` | The pool is empty and today's quota is used. |
+| `issuer refused: 403 … daily quota` | The wallet (or code) has used its quota. |
+| `a valid attestation code is required` | The issuer requires a code. |
+| `issuer published 2 keys … refusing this issuer` | The issuer tried to hand different users different keys (a tracking attack). The client refuses it. |

@@ -1,0 +1,160 @@
+---
+title: "Troubleshooting"
+description: "Diagnose relayer, issuer, OHTTP relay and SDK problems."
+keywords:
+  - "Arkognito troubleshooting"
+  - "relayer errors"
+  - "Railway 502"
+---
+
+Never paste private keys, the issuer seed, access keys or recovery codes into issues or shared
+logs.
+
+## First checks
+
+```bash
+curl -s https://<relayer>/healthz
+curl -s https://<relayer>/v1/info
+curl -s https://<ohttp-relay>/healthz
+```
+
+| Field | Look for |
+| --- | --- |
+| `ok` | `true` |
+| `balanceGlm` | Above `LOW_BALANCE_GLM` (default 0.2) |
+| `queue` | Not growing without bound |
+| `batches` / `lastFlushBlock` | Moving forward when there is traffic |
+| `heartbeat` | An entity key: the relayer is discoverable |
+| `doubleSpendsDetected` | `0` |
+| OHTTP relay `targets` | The number of relayers it verified |
+
+## Deployment
+
+<AccordionGroup>
+<Accordion title="Railway answers 502">
+
+The service's `PORT` variable and the domain's target port differ. Set `PORT` explicitly (8787 for
+relay-1, 8788 for relay-2, 8790 for the OHTTP relay) and make the domain's target port the same.
+
+</Accordion>
+<Accordion title="EACCES on /data in relay-1's logs">
+
+Railway mounts volumes as root and the image runs as a normal user. Add `RAILWAY_RUN_UID=0`, or
+remove the volume and `ISSUER_QUOTA_FILE` (quotas then reset on restart).
+
+</Accordion>
+<Accordion title="RELAYER_PRIVATE_KEY is not set">
+
+The relayer found no key. Set `RELAYER_PRIVATE_KEY`, or `RELAYER_1_PRIVATE_KEY` when no
+`RELAYER_KEY_VAR` is given, or point `RELAYER_KEY_VAR` at the variable that holds it.
+
+</Accordion>
+<Accordion title="ISSUER_RSA_SEED must be 32 bytes of hex">
+
+`ISSUER=on` needs `ISSUER_RSA_SEED` as `0x` followed by 64 hex characters. `npm run setup`
+generates one.
+
+</Accordion>
+<Accordion title="LOW BALANCE in the logs">
+
+Fund the relayer's address (shown on `/healthz` and `/v1/info`) from the
+[faucet](https://hub.arkiv.network/faucet) or another wallet.
+
+</Accordion>
+<Accordion title="nonce too low, replacement transaction, or repeated stale key prediction">
+
+The same wallet is running in two places (another relayer, `npm run dev:relayers`, a test). Stop
+the other copy. One wallet, one process.
+
+</Accordion>
+</AccordionGroup>
+
+## In the app
+
+<AccordionGroup>
+<Accordion title="no relayer: pass `relayers` or run one (none is live on Arkiv)">
+
+No `relayers` were given and no live heartbeat exists. Start a relayer, or pass `relayers`.
+
+</Accordion>
+<Accordion title="no relayer is reachable">
+
+Every configured or discovered relayer failed `/v1/info`. Check `/healthz`. In a browser on an
+https page, `http://` relayers are blocked as mixed content: relayers must have https URLs, and
+`RELAYER_PUBLIC_URL` must be that https URL.
+
+</Accordion>
+<Accordion title="every relayer failed: …">
+
+The message lists each relayer's reason:
+
+- `relayer refused: 400 …`: the record broke a rule (see the next section);
+- `relayer refused: 402 …`: the relayer requires tokens and none was sent;
+- `relayer refused: 403 …`: the token was rejected (spent, wrong day, unknown issuer key);
+- `relayer refused: 429 …` or `503 …`: rate limit or full queue, try again or use another relayer;
+- `timed out waiting for inclusion`: the relayer's queue stopped moving;
+- `no batch of N formed in time; not written`: `minAnonymity` was not reached within `maxHoldMs`;
+- `… misbehaved: …`: the relayer tampered with or misdirected the record; it is marked bad.
+
+</Accordion>
+<Accordion title="check() refused this record: …">
+
+`strict: true` is set and `check()` raised warnings. Coarsen the attributes (see
+[fingerprinting](/concepts/fingerprinting)) or drop `strict`.
+
+</Accordion>
+<Accordion title="attribute name … must be lowercase letters, digits, '.', '-' or '_'">
+
+The Arkiv node rejects uppercase attribute names, and one bad name would fail every record in a
+batch, so the client refuses it first. Rename `minBatch` to `minbatch`.
+
+</Accordion>
+<Accordion title="expiry of …s is past the largest bucket">
+
+Lifetimes are rounded up to 1 hour, 1 day, 7 days, 30 days or 90 days; longer is refused. Also,
+`expires` must be relative (`ExpirationTime.fromDays(…)`), not an absolute block or date.
+
+</Accordion>
+<Accordion title="record is … bytes; the largest Arkognito record is 16384 bytes">
+
+The payload plus envelope does not fit in 16 KB. Store less, or split it into several records.
+
+</Accordion>
+<Accordion title="… is not one of your records">
+
+`proveOwnership` could not find the record among yours. It must be a record written by this wallet
+in this app, and still live.
+
+</Accordion>
+<Accordion title="This wallet produced two different signatures for the same message">
+
+The wallet signs non-deterministically (some MPC, passkey or hardware setups). Use random-root mode
+with a recovery code (`KeyVault.random`, `WorkerVault.random`).
+
+</Accordion>
+<Accordion title="… is a smart contract wallet">
+
+Smart-contract wallets are not supported in this version. Use an externally owned account.
+
+</Accordion>
+</AccordionGroup>
+
+## Tokens
+
+| Message | Fix |
+| --- | --- |
+| `no rate-limit token left for today` | The pool is empty and the quota is used. Wait for the next UTC day, or ask the operator to raise `TOKENS_PER_DAY`. |
+| `issuer refused: 403 … daily quota is N tokens; 0 left` | Same: the wallet (or attestation code) used its quota. |
+| `issuer refused: 403 … a valid attestation code is required` | The issuer requires a code: pass `tokenAttestation`. |
+| `issuer refused: 403 … request timestamp is stale` | The device clock is more than 5 minutes off. |
+| `no issuer key on Arkiv for <app> day <n>` | The issuer has not published today's key. Check the issuer relayer is running. |
+| `issuer published 2 keys … refusing this issuer` | Two issuer keys exist for one day. The issuer's seed changed mid-day, or it is trying to track users. |
+| `token already spent` | The token was redeemed before. The client takes a fresh one on retry. |
+
+## Reading
+
+| Symptom | Fix |
+| --- | --- |
+| `cursor belongs to a different query, block or select` | A block landed while paging. Pin the page-through with `.atBlock(await client.getBlockNumber())`. |
+| `"$createdAt" … cannot be filtered on` from the Arkiv SDK | The SDK's query builder refuses it. Send it as a raw query with `client.query("… AND $createdAt = u64(<block>)")`; the node supports it. |
+| `myEntities()` is slow | It downloads the app's record list. Expect seconds for hundreds of records; it grows with the app. |

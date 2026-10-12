@@ -1,0 +1,72 @@
+---
+title: "Migrate from the Arkiv SDK"
+description: "Make an existing Arkiv app private by changing three lines."
+keywords:
+  - "Arkiv SDK migration"
+  - "createEntity"
+  - "Sketch App"
+---
+
+Arkiv's MetaMask Sketch App tutorial becomes private by changing three code lines. The same pattern
+applies to most apps that write with `walletClient.createEntity` and read with `.ownedBy(account)`.
+
+## The diff
+
+```diff store.ts
+ import { createPublicClient, createWalletClient, ExpirationTime, jsonToPayload } from "@arkiv-network/sdk"
++import { createPrivateClient } from "arkognito"
+ import { tiramisu } from "@arkiv-network/sdk/chains"
+ import { eq } from "@arkiv-network/sdk/query"
+ import { custom, http } from "viem"
+
+ export async function openStore() {
+   const account = await connectWallet()
+   const publicClient = createPublicClient({ chain: tiramisu, transport: http() })
+-  const arkiv = createWalletClient({ chain: tiramisu, transport: custom(window.ethereum!), account })
++  const arkiv = await createPrivateClient({ app: PROJECT, wallet: createWalletClient({ chain: tiramisu, transport: custom(window.ethereum!), account }) })
+   return {
+     account,
+     save: (sketch) =>
+       arkiv.createEntity({
+         payload: jsonToPayload(sketch),
+         contentType: "application/json",
+         attributes: { project: PROJECT, type: "sketch" },
+         expires: ExpirationTime.fromDays(30),
+       }),
+     list: async () =>
+-      (await publicClient.select({ key: true, payload: true }).where(eq("project", PROJECT), eq("type", "sketch")).ownedBy(account).fetch()).entities.map((e) => ({ key: e.key, ...e.toJson() })),
++      (await arkiv.myEntities({ where: { type: "sketch" } })).map((e) => ({ key: e.key, ...e.toJson() })),
+   }
+ }
+```
+
+Both files are in the repository:
+[`store-public.ts`](https://github.com/soumyacodes007/Arkognito/blob/main/apps/demo/src/store-public.ts)
+and [`store-private.ts`](https://github.com/soumyacodes007/Arkognito/blob/main/apps/demo/src/store-private.ts).
+
+## What changes for the user
+
+| | Before | After |
+| --- | --- | --- |
+| Pop-ups per save | One MetaMask transaction | None (one-time signatures happen at connect) |
+| Gas | Paid by the user, needs GLM | Paid by the relayer, the user needs none |
+| Save time | About 5–10 s | About 25–30 s on a busy relayer, up to about 90 s on a quiet one |
+| Owner query on the wallet | Lists every sketch | Lists nothing |
+
+## Mapping the APIs
+
+| Arkiv SDK | Arkognito |
+| --- | --- |
+| `walletClient.createEntity(params)` | `ark.createEntity(params)`, same parameters plus optional `scope` and `encrypt` |
+| `.ownedBy(account)` queries for "my records" | `ark.myEntities({ where })` |
+| `entity.toJson()` / `entity.toText()` | Same methods on each `myEntities()` record |
+| `patchEntity`, `extendEntity`, `deleteEntity` | Not available: records are create-only. Write a new record and let the old one expire. |
+| Reading other people's records | Unchanged: normal Arkiv queries. Verify with `verifyRecord()`; see [reading records](/guides/read-records). |
+
+## Things to check in your app
+
+- Attribute names are lowercase.
+- Attributes do not carry exact timestamps or precise coordinates. The tutorial's original
+  `timestamp: Date.now()` attribute is exactly what `check()` warns about.
+- Lifetimes fit a bucket: the tutorial's 365 days is longer than the 90-day maximum.
+- Your UI tolerates a 25–90 second save.
