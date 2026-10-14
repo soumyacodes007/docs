@@ -1,0 +1,64 @@
+---
+title: "Write a record for someone else"
+description: "Inbox records: one user writes, another owns and reads it, and nothing on chain names either."
+keywords:
+  - "sendTo"
+  - "inbox"
+  - "stealth address"
+  - "ERC-5564"
+---
+
+Sometimes the record belongs to someone other than the writer: a shop owner sends a customer a
+receipt, a clinic issues a result, an app hands a user a credential. With plain Arkiv the writer
+would have to know the recipient's wallet and make it the owner, which links them in public.
+
+Inbox records work like stealth addresses (ERC-5564). The recipient shares an **inbox address**.
+Anyone can write to it; each record gets a one-time owner that only the recipient controls,
+encrypted so only the recipient can read it.
+
+{/* DIAGRAM: inbox-records
+    File: /images/diagrams/inbox-records.png
+    Show: Alice shares "arkognito-inbox1:…" -> Bob's client derives a one-time owner S + tag + key
+    from it (ECDH) -> relayer writes the record in a batch, owner S -> Alice's myEntities() opens the
+    tag with her view key -> she reads it and can prove she owns S. Bob cannot. */}
+
+## Share your inbox address
+
+```ts
+const inbox = await alice.inboxAddress() // "arkognito-inbox1:02…"
+```
+
+It is stable for the user and app. Publish it wherever the writer can find it.
+
+## Send
+
+```ts
+await bob.sendTo(inbox, {
+  payload: new TextEncoder().encode(JSON.stringify({ receipt: "R-1042" })),
+  contentType: "application/json",
+  attributes: { type: "receipt" },
+  expires: ExpirationTime.fromDays(30),
+})
+```
+
+The payload is always encrypted to the recipient. Bob's client pays with Bob's rate-limit token;
+the relayer writes the record like any other.
+
+## Receive
+
+```ts
+const alice = await createPrivateClient({ app: "my-app", wallet, inbox: true })
+const mine = await alice.myEntities() // includes records sent to you; ref.kind === "inbox"
+const proof = await alice.proveOwnership(mine[0].entityKey, { challenge, verifier: "desk-1" })
+```
+
+Scanning for inbox records costs one elliptic-curve multiplication per record in the app, so it is
+off unless you pass `inbox: true`.
+
+## What others can tell
+
+| Party | Learns | Does not learn |
+| --- | --- | --- |
+| Anyone reading Arkiv | that a record is an inbox record (its envelope is not signed by its owner) | who it is for, who sent it, what it says |
+| The sender | the record they wrote | anything about the recipient's other records; they cannot read it back or prove ownership |
+| The relayer | the same as for any record | who the recipient is |

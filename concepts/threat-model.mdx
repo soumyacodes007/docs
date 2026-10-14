@@ -36,7 +36,9 @@ We assume a relayer and the issuer may be run by the same team, and design for i
 - **Relayer and OHTTP relay must not collude.** OHTTP protects IPs only if they are run by
   different people. Without OHTTP, the relayer sees IPs.
 - **Anonymity is per batch.** In a quiet hour a batch can be small; use `minAnonymity` to refuse
-  small batches.
+  small batches, or relayers with `COVER_MIN_BATCH` to pad encrypted records with cover.
+- **Inbox records are recognisable** as inbox records, though not who they are for or who sent them.
+- **A passkey root is lost with the passkey;** creating one returns a recovery code.
 - **Quotas limit wallets, not people,** unless the issuer requires attestation codes.
 - **A hostile frontend** can still ask the key worker for signatures and ownership proofs. Only use
   Arkognito on pages you trust, with no third-party scripts.

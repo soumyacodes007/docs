@@ -27,11 +27,13 @@ interactive version of this page is in the **API Reference** tab.
   "issuerUrl": "https://relay-1.example.com",
   "maxMinAnonymity": 50,
   "maxHoldMs": 1800000,
-  "ohttpKey": "0x…"
+  "ohttpKey": "0x…",
+  "coverMinBatch": 5
 }
 ```
 
-`issuer` and `issuerUrl` are present when tokens are required; `ohttpKey` when OHTTP is on.
+`issuer` and `issuerUrl` are present when tokens are required; `ohttpKey` when OHTTP is on;
+`coverMinBatch` when the relayer pads small batches with cover records.
 
 ### POST /v1/records
 
@@ -55,13 +57,14 @@ Queue a sealed record.
 ```
 
 `u64` and `u256` attribute values are decimal strings. `token` is required when the relayer requires
-tokens; `minAnonymity` and `maxHoldMs` are optional.
+tokens; `minAnonymity` and `maxHoldMs` are optional. `inbox: true` marks a record written for someone
+else, whose envelope is signed by a key other than `owner`.
 
 Returns `202 { "id": "<uuid>" }`.
 
 | Status | When |
 | --- | --- |
-| `400` | Invalid request: `owner` not an address or equal to the relayer; envelope not padded to 512/1024/4096/16384 bytes; `expSeconds` not a bucket or not equal to the envelope's; `app` mismatch; invalid or uppercase attribute name; missing `project`; more than 32 attributes; `minAnonymity` or `maxHoldMs` out of range; envelope signature does not recover to `owner`; body not JSON |
+| `400` | Invalid request: `owner` not an address or equal to the relayer; envelope not padded to 512/1024/4096/16384 bytes; `expSeconds` not a bucket or not equal to the envelope's; `app` mismatch; invalid or uppercase attribute name; missing `project`; more than 32 attributes; `minAnonymity` or `maxHoldMs` out of range; envelope signature does not recover to `owner` (or, with `inbox: true`, does); body not JSON |
 | `402` | Tokens required and none sent |
 | `403` | Token rejected: invalid, spent, from a day no longer accepted, or no issuer key on Arkiv |
 | `413` | Body over 64 KB |
@@ -81,7 +84,8 @@ Returns `202 { "id": "<uuid>" }`.
   "entityKey": "0x334c…bb805",
   "txHash": "0x…",
   "block": "352358",
-  "batchSize": 5
+  "batchSize": 5,
+  "cover": 4
 }
 ```
 

@@ -58,6 +58,8 @@
               "guides/read-records",
               "guides/ownership-proofs",
               "guides/private-payloads",
+              "guides/passkeys",
+              "guides/send-to-user",
               "guides/rate-limit-tokens",
               "guides/oblivious-http"
             ]

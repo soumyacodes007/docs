@@ -61,6 +61,17 @@ relayer writes anyway and tells the client the batch size. A client that would r
 const ark = await createPrivateClient({ app: "my-app", wallet, minAnonymity: 5 })
 ```
 
+A relayer can also fill small batches itself. Started with `COVER_MIN_BATCH=5`, it pads a batch of
+fewer than 5 records with **cover records**: each copies a real encrypted record's app, attributes,
+expiry and ciphertext length, with random ciphertext, a random tag, a fresh owner that really signs
+it and, with tokens on, its own spent marker. Nobody outside the relayer can tell cover from real,
+and they open for nobody. Two limits: it only works for encrypted records (random bytes cannot pass
+for someone's plaintext), and it costs the relayer gas. The client is told how many were cover:
+
+```ts
+const { batchSize, cover } = await ark.createEntity({ ..., encrypt: true }) // e.g. 5 and 4
+```
+
 ## Trusting nothing the relayer says
 
 A relayer could edit a record, keep it, or hand it to its own address. The client checks:

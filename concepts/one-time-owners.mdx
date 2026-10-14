@@ -36,6 +36,10 @@ the fallback. A wallet that passes is remembered by a 16-byte fingerprint of its
 `localStorage`), so later connects sign once and compare against it. Set
 `verifyDeterminism: "always"` to sign twice every time.
 
+Users without a wallet, or with a smart-contract wallet, can use a **passkey** instead: the WebAuthn
+PRF extension gives a stable secret per passkey and app, and the root derives from that. See
+[Sign in with a passkey](/guides/passkeys).
+
 From the signature the SDK derives a private **root key**:
 
 ```text

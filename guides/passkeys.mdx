@@ -1,0 +1,67 @@
+---
+title: "Sign in with a passkey"
+description: "Derive a user's Arkognito keys from a passkey instead of a wallet: one biometric prompt, no extension."
+keywords:
+  - "passkey"
+  - "WebAuthn PRF"
+  - "no wallet"
+  - "smart account"
+---
+
+A wallet signature is one way to get a stable root key. A passkey is another. The WebAuthn **PRF
+extension** returns the same 32 secret bytes every time for one passkey, one site and one input.
+Arkognito derives the root from those bytes, so users without a wallet, and users of smart-contract
+wallets (which cannot use signature mode), get exactly the same privacy.
+
+{/* DIAGRAM: passkey-root
+    File: /images/diagrams/passkey-root.png
+    Show: passkey (Face ID / Touch ID / security key) -> PRF(salt = sha256("arkognito/passkey/v1|" + app))
+    -> 32-byte secret -> HKDF -> root key in the key worker -> one-time owners, tags, issuer identity.
+    Side branch at creation: root -> recovery code shown once. */}
+
+## Create the passkey once
+
+```ts
+import { WorkerVault } from "arkognito"
+
+const { vault, recoveryCode, credentialId } = await WorkerVault.createPasskey("my-app", {
+  userName: "Keys for My App",
+})
+```
+
+- Show `recoveryCode` to the user once, and ask them to keep it. It is the only backup (see below).
+- Keep `credentialId` (it is not secret) so you can name the passkey at sign-in.
+- The user handle is random. Arkognito keeps no account, so nothing ties the passkey to a person.
+
+## Sign in after that
+
+```ts
+import { createPrivateClient } from "arkognito"
+
+const ark = await createPrivateClient({ app: "my-app", passkey: { credentialId } })
+```
+
+One biometric or PIN prompt. Keys are derived inside the key worker, exactly as with a wallet, and
+everything else (writing, reading, proofs, rate-limit tokens) works the same.
+
+## Recovery
+
+The PRF secret belongs to that passkey. If the user deletes it, or moves to a device it does not
+sync to, the keys are gone. The recovery code restores the very same keys:
+
+```ts
+const vault = KeyVault.fromRecoveryCode(recoveryCode, "my-app")
+const ark = await createPrivateClient({ app: "my-app", vault })
+```
+
+## Support
+
+PRF works in current Chrome, Edge and Safari with platform passkeys and most security keys. When
+the browser or authenticator does not support it, Arkognito throws `PasskeyPrfUnsupportedError`;
+fall back to a wallet, or to random-root mode with a recovery code.
+
+| Option | Meaning |
+| --- | --- |
+| `rpId` | Your domain. A passkey only works under the id it was created for. Default: the page's own. |
+| `rpName`, `userName` | Shown by the authenticator at creation. |
+| `credentialId` | Sign in with this passkey instead of letting the user pick one. |

@@ -31,6 +31,7 @@ image serves every role; `ROLE` picks it.
 | `MAX_WAIT_MS` | `60000` | Write anyway after the oldest record has waited this long |
 | `MIN_INTERVAL_BLOCKS` | `5` | Never write batches closer together than this |
 | `MAX_BATCH` | `40` | Largest batch |
+| `COVER_MIN_BATCH` | `0` (off) | Fill batches smaller than this with cover records copied from a real encrypted record. Costs gas per cover record and marker |
 | `MAX_QUEUE` | `5000` | Queue cap; further submissions get `503` |
 | `RATE_LIMIT_PER_MIN` | `30` | Submissions per minute per address, tokens off only, kept in memory |
 | `MAX_MIN_ANONYMITY` | `50` | Largest `minAnonymity` a client may ask for |

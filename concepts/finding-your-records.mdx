@@ -23,16 +23,18 @@ records or addresses.
    creation blocks and attributes, no payloads. Every user of the app downloads the same list.
 2. **Open tags locally.** Try to decrypt each record's `vtag`. Only tags made by your root key
    open; each names one of your keys, whose address must equal the record's owner.
-3. **Fetch by batch.** Download full records only for the batches that hold one of yours, plus two
-   other batches at random, then verify each signature.
+3. **Fetch the payloads.** For an app with up to 500 records (`fetchAllUnder`), download all of
+   them: the RPC provider then learns nothing beyond "this client uses the app". For bigger apps,
+   download full records only for the batches that hold one of yours, plus two other batches at
+   random. Either way, verify each signature.
 
-The RPC provider learns that you use the app, and that one of a few batches interests you. It
-never learns which record, or which addresses, are yours.
+For a big app the RPC provider learns that one of a few batches interests you. It never learns
+which record, or which addresses, are yours.
 
 ## After writing
 
 The client confirms a new record the same way: it fetches the whole batch the relayer named, never
-the single key. If a relayer fails to answer, the client looks for its own tag in a fresh listing
+the single key, and reads again for a few seconds if the RPC node has not caught up with that block. If a relayer fails to answer, the client looks for its own tag in a fresh listing
 before trying another relayer, so a relayer that wrote the record and then crashed causes no
 duplicate.
 

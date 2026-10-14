@@ -40,6 +40,10 @@ root = HKDF-SHA256(ikm = signature (65 bytes), salt = none, info = "arkognito/ro
 
 Random-root mode: `root` is 32 random bytes; the recovery code is `"arkognito1-" + hex(root)`.
 
+Passkey mode: the WebAuthn PRF extension evaluated with `salt = sha256("arkognito/passkey/v1|" + app)`
+returns a 32-byte `secret`; `root = HKDF-SHA256(secret, info = "arkognito/root/v1/passkey/" + app, L = 32)`.
+Creating the passkey also returns the recovery code for that root.
+
 A **key reference** is a `kind` (record or scope) and a 15-byte `id`:
 
 - a record gets a fresh random `id`;
@@ -116,9 +120,28 @@ lifetime `exp` seconds.
    createdAt and attributes, every page at the same `atBlock`.
 2. Trial-decrypt every `vtag`. A tag that opens names a key reference whose address must equal the
    record's owner.
-3. Fetch full records for whole batches only, with
+3. When the app has at most `fetchAllUnder` records (default 500), fetch every record of the
+   project at one block. Otherwise fetch full records for whole batches only, with
    `project = … AND $createdAt = u64(<block>) AND $creator = addr(<relayer>)`, for each batch that
    holds one of yours plus 2 random cover batches. Verify each record.
+
+### Inbox records
+
+```text
+k_spend = key(root, "identity/inbox-spend/v1"), k_view = key(root, "identity/inbox-view/v1")
+inbox address = "arkognito-inbox1:" || hex(compressed K_spend) || hex(compressed K_view)
+
+sender:   r random, R = rG with even y;  shared = x(r · K_view)
+          c       = scalar(shared, "arkognito/inbox/owner/v1|" + app)    owner = address(K_spend + cG)
+          k_sig   = scalar(shared, "arkognito/inbox/sign/v1|" + app)     signs the envelope
+          dataKey = HKDF(shared, "arkognito/inbox/data/v1|" + app, 32)   payload always encrypted
+          vtag    = base64url(x(R) || viewTag (1 byte) || 11 random bytes)
+recipient: shared = x(k_view · R); owner key = k_spend + c; envelope must recover to address(k_sig·G)
+scalar(ikm, info) = (HKDF-SHA256(ikm, info, 48) mod (n - 1)) + 1
+```
+
+The submission carries `inbox: true`; the relayer requires a valid signature that does not recover
+to `owner`.
 
 After writing, a client confirms its record the same way. If a relayer does not answer, the client
 looks for its own `vtag` in a fresh listing before retrying elsewhere.
@@ -130,6 +153,11 @@ looks for its own `vtag` in a fresh listing before retrying elsewhere.
   the batch size (repeated until stable). Flush when it holds `minBatch` records or its oldest has
   waited `maxWaitMs`, and never before `lastFlushBlock + minIntervalBlocks`. A record whose hold
   expires without a large enough batch fails unwritten.
+- **Cover** (`COVER_MIN_BATCH = m`, optional): a batch of fewer than `m` records is filled with
+  records copied from a random encrypted record in it (same app, attributes except `vtag`, content
+  type, expiry, ciphertext length; random ciphertext and `vtag`; a fresh owner that signs it, or a
+  separate signer when copying an inbox record; its own spent marker with a random token id).
+  Plaintext batches get no cover. The status reports `cover`.
 - **Shuffling:** records (Fisher–Yates, cryptographic randomness), and spent markers separately.
 - **Writing:** `predictEntityKeys(relayer, n + m)`, then one `executeBatch`: creates
   `[records…, markers…]` with the predicted salts, and ownership changes giving record `i` to its

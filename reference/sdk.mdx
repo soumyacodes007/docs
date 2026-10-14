@@ -32,6 +32,21 @@ relayer requires tokens, starts fetching the day's tokens.
   Signs the derivation message. Either this or `vault` is required.
 </ParamField>
 
+<ParamField path="passkey" type="true | PasskeyOptions">
+  Sign in with an existing passkey (WebAuthn PRF) instead of a wallet: one biometric or PIN prompt.
+  Create it first with `WorkerVault.createPasskey(app, opts?)`. See [passkeys](/guides/passkeys).
+</ParamField>
+
+<ParamField path="inbox" type="boolean" default="false">
+  Also find records others wrote to your inbox address. Costs one curve multiplication per record
+  in the app when listing.
+</ParamField>
+
+<ParamField path="fetchAllUnder" type="number" default="500">
+  Apps with at most this many records are downloaded whole when reading, so nothing says which are
+  yours. `0` always fetches batches plus cover batches.
+</ParamField>
+
 <ParamField path="vault" type="Vault">
   A ready key vault (`KeyVault` or `WorkerVault`) instead of `wallet`, for example random-root mode.
 </ParamField>
@@ -129,6 +144,9 @@ relayer requires tokens, starts fetching the day's tokens.
 | Member | Description |
 | --- | --- |
 | `createEntity(params)` | Write a record. See below. |
+| `sendTo(inboxAddress, params)` | Write a record for someone else: owned by a one-time address only they control, encrypted to them. Same params as `createEntity` without `scope` and `encrypt`. See [send to user](/guides/send-to-user). |
+| `inboxAddress()` | Your inbox address for this app (`"arkognito-inbox1:…"`). |
+| `lastReadMode()` | How the last `myEntities()` fetched payloads: `"all"` or `"batches"`. |
 | `myEntities({ refresh?, where? })` | Your verified records, newest first. `where` filters attribute values locally. |
 | `proveOwnership(entityKey, { challenge, verifier, ttlSeconds? })` | An ownership proof for one record. `ttlSeconds` defaults to 300. |
 | `check({ attributes, expires, payload })` | Fingerprinting warnings, synchronous. |
@@ -151,7 +169,8 @@ relayer requires tokens, starts fetching the day's tokens.
 <ResponseField name="owner" type="Address">The one-time owner.</ResponseField>
 <ResponseField name="txHash" type="Hex">The batch transaction.</ResponseField>
 <ResponseField name="relayer" type="string">The relayer that wrote it (empty when recovered).</ResponseField>
-<ResponseField name="batchSize" type="number">Records in the batch, including this one.</ResponseField>
+<ResponseField name="batchSize" type="number">Records in the batch, including this one and any cover records.</ResponseField>
+<ResponseField name="cover" type="number">How many of them the relayer added as cover (`COVER_MIN_BATCH`).</ResponseField>
 <ResponseField name="recovered" type="boolean">The relayer did not answer but the record had landed; nothing was written twice.</ResponseField>
 <ResponseField name="warnings" type="CheckWarning[]">Fingerprinting and rarity warnings.</ResponseField>
 
@@ -172,6 +191,9 @@ Returned by `myEntities()`: `key`, `entityKey`, `owner`, `creator`, `app`, `cont
 | `KeyVault.signDerivation(wallet, app, opts?)` | Only the checked derivation signature. |
 | `WorkerVault.fromWallet(wallet, app, opts?)` | Keys in a Web Worker. Same checks. |
 | `WorkerVault.random(app)`, `WorkerVault.fromRecoveryCode(code, app)` | Random-root mode in a worker. |
+| `WorkerVault.createPasskey(app, opts?)`, `KeyVault.createPasskey(app, opts?)` | Create a passkey and a root from it. Returns `{ vault, recoveryCode, credentialId }`. |
+| `WorkerVault.fromPasskey(app, opts?)`, `KeyVault.fromPasskey(app, opts?)` | Sign in with an existing passkey. Throws `PasskeyPrfUnsupportedError` without PRF. |
+| `vault.inboxAddress()`, `vault.openInbox(tags)`, `vault.envelopeSignerOf(ref)` | Inbox records: your address, trial-opening inbox tags, and the key an inbox record's envelope must be signed by. |
 | `vault.issuerIdentity()`, `vault.signIssuance(body)` | The derived address that asks for rate-limit tokens, and its signature over an issuance request. |
 | `WorkerVault.spawn()` | The bundled worker. `vault.terminate()` stops it. |
 
@@ -186,7 +208,7 @@ Related: `derivationTypedData(app, chainId?)`, `DERIVATION_PURPOSE` (`"arkognito
 
 | Export | Description |
 | --- | --- |
-| `verifyRecord(entity, { app?, relayers?, owner? })` | `{ ok: true, record }` or `{ ok: false, reason }`. Needs key, owner, creator, payload and attributes; checks lifetime when `createdAt` and `expiresAt` are present. |
+| `verifyRecord(entity, { app?, relayers?, owner?, signer? })` | `{ ok: true, record }` or `{ ok: false, reason }`. Needs key, owner, creator, payload and attributes; checks lifetime when `createdAt` and `expiresAt` are present. |
 | `signOwnershipProof(signer, { entityKey, challenge, verifier, ttlSeconds?, chainId? })` | Low-level proof signing. |
 | `verifyOwnershipProof(proof, { challenge, verifier, client, now? })` | `{ ok: true }` or `{ ok: false, reason }`. |
 | `proofTypedData(body)` | The EIP-712 structure. |
@@ -197,6 +219,8 @@ Related: `derivationTypedData(app, chainId?)`, `DERIVATION_PURPOSE` (`"arkognito
 | --- | --- |
 | `listApp(client, project, relayers?)` | The app's records without payloads, pinned to one block. |
 | `fetchBatches(client, project, [{ block, creator }])` | Full records of whole batches. |
+| `fetchProject(client, project, atBlock?)` | Every record of the project with payloads, pinned to one block. |
+| `sealInbox(inboxAddress, app)`, `parseInboxAddress(address)` | Low-level inbox sending: the one-time owner, envelope signer, tag and payload encryption for one record. |
 | `discoverRelayers(reader, fetch?)` | Live relayers whose `/v1/info` matches their heartbeat. |
 | `heartbeatRelayers(reader)` | All live heartbeats, unverified. |
 
