@@ -29,9 +29,12 @@ message: { purpose: "arkognito key v1", app: "<your app>", chainId: 7738577 }
 - The **chain id** is part of it, so testnet keys never carry over to another network.
 - The wallet shows the purpose, so users can spot a site asking for it under false pretences.
 
-The SDK signs **twice** and compares. Some wallets (certain MPC, passkey or hardware setups) produce
-a different signature each time, which would lose the user's keys on the next login. Those wallets
-are refused; a random root with a recovery code is the fallback.
+The first time a device sees a wallet for an app, the SDK signs **twice** and compares. Some wallets
+(certain MPC, passkey or hardware setups) produce a different signature each time, which would lose
+the user's keys on the next login. Those wallets are refused; a random root with a recovery code is
+the fallback. A wallet that passes is remembered by a 16-byte fingerprint of its signature (in
+`localStorage`), so later connects sign once and compare against it. Set
+`verifyDeterminism: "always"` to sign twice every time.
 
 From the signature the SDK derives a private **root key**:
 

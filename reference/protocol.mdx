@@ -29,8 +29,10 @@ types:   ArkognitoKey { purpose: string, app: string, chainId: uint256 }
 message: { purpose: "arkognito key v1", app: <app>, chainId: 7738577 }
 ```
 
-The client signs twice and refuses the wallet if the signatures differ, and refuses accounts that
-have code (smart-contract wallets).
+The client refuses a wallet whose signatures differ, and refuses accounts that have code
+(smart-contract wallets). By default it signs twice the first time a device sees the wallet for an
+app and stores `fp = HKDF-SHA256(signature, info = "arkognito/wallet-check/v1", L = 16)` under
+`arkognito:wallet-check:<chainId>:<app>:<lowercase address>`; later it signs once and compares.
 
 ```text
 root = HKDF-SHA256(ikm = signature (65 bytes), salt = none, info = "arkognito/root/v1/" + app, L = 32)
@@ -195,7 +197,9 @@ Scheme: RSA blind signatures, `RSABSSA-SHA384-PSS-Randomized` (RFC 9474), 2048-b
   `scheme`. Read from Arkiv only, filtered by the issuer as `$creator`. Two keys for one app and
   epoch mean equivocation: refuse the issuer.
 - **Issuance:** each token message is 32 random bytes, prepared as `32 random bytes || message`
-  (64 bytes) and blinded. The wallet signs (`personal_sign`):
+  (64 bytes) and blinded. The issuer identity (`k = HKDF(root, "identity/issuer/v1", 48)` reduced
+  like a record key; or the wallet, with `tokenIdentity: "wallet"`) signs (`personal_sign`), and the
+  request's `wallet` field carries its address:
 
 ```text
 arkognito tokens v1
@@ -206,7 +210,7 @@ request: <0x sha256 of the blinded list joined by ','>
 ts: <ts>
 ```
 
-  The issuer checks the signature, that `ts` is within 5 minutes, and the quota (per wallet per app
+  The issuer checks the signature, that `ts` is within 5 minutes, and the quota (per requesting address per app
   per day, or per attestation code), then returns the blind signatures.
 - **Client timing:** fetch tokens at session start, spend the oldest first, never spend a token
   younger than 60 s.

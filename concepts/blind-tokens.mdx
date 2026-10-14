@@ -15,7 +15,7 @@ that received it.
 
 {/* DIAGRAM: blind-tokens
     File: /images/diagrams/blind-tokens.png
-    Show: at session start: client blinds 5 random messages -> issuer (sees wallet + count) signs blind
+    Show: at session start: client blinds 5 random messages -> issuer (sees a derived identity + count, not the wallet) signs blind
     -> client unblinds. Later, separately: client spends one token with each record -> relayer (sees
     token, not wallet) checks signature + spent list on Arkiv -> writes record + spent marker in one tx. */}
 
@@ -23,7 +23,7 @@ that received it.
 
 | | Sees | Never sees |
 | --- | --- | --- |
-| Issuer | Your wallet, how many tokens it took, when | Which records those tokens paid for |
+| Issuer | An identity derived from your keys for this app, how many tokens it took, when | Your wallet, and which records those tokens paid for |
 | Relayer | The token you spend with each record | Your wallet |
 | Arkiv | A spent marker with a random id per token | Anything linking markers to wallets |
 
@@ -37,7 +37,9 @@ indistinguishable.
    `arkognito.issuerKey` entity by the issuer's wallet. Clients and relayers read it from Arkiv,
    never from HTTP.
 2. **Issuance.** At session start the client prepares random messages, blinds them, and sends them
-   with a signature from the user's wallet. The issuer checks the wallet's daily quota and signs.
+   signed by the user's **issuer identity**: an address derived from the root key for this app,
+   unrelated to the wallet and to every record owner. It signs without a wallet prompt. The issuer
+   checks that identity's daily quota and signs.
 3. **Redemption.** Each write carries one unblinded token. The relayer verifies it, refuses it if
    its id is already on the spent list, and writes an `arkognito.spent` marker in the same
    transaction as the record.
@@ -58,7 +60,7 @@ indistinguishable.
 
 ## Limits
 
-- **Per wallet is not per person.** Wallets are free. Issuers can require one-time
+- **Per wallet is not per person.** Each wallet has one issuer identity per app, and wallets are free. Issuers can require one-time
   [attestation codes](/guides/rate-limit-tokens#attestation-codes) to limit people instead.
 - **Tokens can be shared or sold.** Daily expiry keeps the damage small.
 - **Issuer and relayer run by one team** could compare IPs at issuance and redemption, unless

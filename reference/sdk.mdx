@@ -19,7 +19,7 @@ Peer dependencies: `@arkiv-network/sdk` 0.8.1 and `viem`. Works in browsers and 
 const ark = await createPrivateClient(options)
 ```
 
-Derives the user's keys (one wallet signature, checked twice), contacts the relayers and, when a
+Derives the user's keys (one wallet signature; two the first time on a device), contacts the relayers and, when a
 relayer requires tokens, starts fetching the day's tokens.
 
 ### Options
@@ -29,8 +29,7 @@ relayer requires tokens, starts fetching the day's tokens.
 </ParamField>
 
 <ParamField path="wallet" type="viem or Arkiv SDK wallet client">
-  Signs the derivation message, and the token issuance request when tokens are needed. Either this
-  or `vault` is required.
+  Signs the derivation message. Either this or `vault` is required.
 </ParamField>
 
 <ParamField path="vault" type="Vault">
@@ -94,6 +93,21 @@ relayer requires tokens, starts fetching the day's tokens.
   `"auto"` fetches tokens with `wallet` at session start when a relayer requires them.
 </ParamField>
 
+<ParamField path="tokenIdentity" type="&quot;derived&quot; | &quot;wallet&quot;" default="&quot;derived&quot;">
+  Who asks the issuer for tokens. `"derived"`: an address derived from the user's keys for this app,
+  so asking opens no wallet prompt and the issuer never sees the wallet. `"wallet"`: the wallet signs
+  each request, for issuers that key quotas to known wallets.
+</ParamField>
+
+<ParamField path="verifyDeterminism" type="&quot;first-use&quot; | &quot;always&quot; | &quot;never&quot;" default="&quot;first-use&quot;">
+  When to check that the wallet signs deterministically. `"first-use"`: twice the first time a
+  device sees the wallet for this app, then once against a stored fingerprint.
+</ParamField>
+
+<ParamField path="determinismStore" type="{ get(key), set(key, value) }" default="localStorage, else memory">
+  Where `"first-use"` remembers verified wallets.
+</ParamField>
+
 <ParamField path="tokenStore" type="TokenStore" default="memoryStore()">
   Where auto mode keeps unspent tokens. `browserTokenStore()` keeps them across sessions.
 </ParamField>
@@ -151,13 +165,14 @@ Returned by `myEntities()`: `key`, `entityKey`, `owner`, `creator`, `app`, `cont
 
 | Export | Description |
 | --- | --- |
-| `KeyVault.fromWallet(wallet, app, opts?)` | Keys in this thread. Signs twice; refuses non-deterministic and smart-contract wallets. |
+| `KeyVault.fromWallet(wallet, app, opts?)` | Keys in this thread. Refuses non-deterministic wallets (signs twice on first use, once after) and smart-contract wallets. |
 | `KeyVault.fromSignature(signature, app)` | From a derivation signature you already hold. |
 | `KeyVault.random(app)` | Random root. Returns `{ vault, recoveryCode }`. |
 | `KeyVault.fromRecoveryCode(code, app)` | Restore a random root. |
 | `KeyVault.signDerivation(wallet, app, opts?)` | Only the checked derivation signature. |
 | `WorkerVault.fromWallet(wallet, app, opts?)` | Keys in a Web Worker. Same checks. |
 | `WorkerVault.random(app)`, `WorkerVault.fromRecoveryCode(code, app)` | Random-root mode in a worker. |
+| `vault.issuerIdentity()`, `vault.signIssuance(body)` | The derived address that asks for rate-limit tokens, and its signature over an issuance request. |
 | `WorkerVault.spawn()` | The bundled worker. `vault.terminate()` stops it. |
 
 Every vault implements `Vault`: `newRecord()`, `scopeRecord(name)`, `openTags(tags)`,

@@ -54,8 +54,9 @@ no central operator and nothing that only one company can run.
     File: /images/diagrams/key-derivation.png
     (Same diagram as on the One-time owners page.) */}
 
-- The wallet signs one EIP-712 message per app (`"arkognito key v1"`, app, chain id), twice to check
-  it is deterministic.
+- The wallet signs one EIP-712 message per app (`"arkognito key v1"`, app, chain id). The first time a
+  device sees the wallet for an app it signs twice to check the signature is deterministic and stores
+  a 16-byte fingerprint; later connects sign once and compare.
 - HKDF derives a **root key**, which never leaves the key worker.
 - Each record gets a **fresh random 15-byte id**; its one-time key and owner `S` derive from the root
   and the id. No counters: nothing is reused after expiry, devices never collide.

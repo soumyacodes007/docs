@@ -41,7 +41,8 @@ const wallet = createWalletClient({ chain: tiramisu, transport: custom(window.et
 const ark = await createPrivateClient({ app: "my-app", wallet })
 ```
 
-The wallet signs one message when the client is created (twice, to check the signature is stable).
+The wallet signs one message when the client is created. The first time on a device it signs twice,
+to check the signature is stable; after that, once. Rate-limit tokens need no extra prompt.
 In a browser the derived keys live in a Web Worker; see
 [bundler requirements](#bundler-requirements).
 

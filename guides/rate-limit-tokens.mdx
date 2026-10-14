@@ -9,14 +9,15 @@ keywords:
 
 A relayer pays gas for every record, so it needs to limit how much each person writes. If it
 limited by wallet, it would learn which wallet wrote which record. Instead, relayers can require a
-**blind token** per write: the issuer sees your wallet when it hands out tokens, the relayer sees a
+**blind token** per write: the issuer sees an identity derived from your keys (not your wallet) when it hands out tokens, the relayer sees a
 token when you spend it, and neither can connect the two. See [blind tokens](/concepts/blind-tokens)
 for how.
 
 ## In an app: nothing to do
 
-When a relayer requires tokens, `createPrivateClient` fetches the day's tokens with the user's
-wallet as soon as the client is created, and spends one per write:
+When a relayer requires tokens, `createPrivateClient` fetches the day's tokens as soon as the client
+is created, and spends one per write. The request is signed by an identity derived from the user's
+keys for this app, so it needs no wallet prompt:
 
 ```ts
 const ark = await createPrivateClient({ app: "my-app", wallet }) // fetches tokens if needed
@@ -25,8 +26,8 @@ await ark.createEntity({ ... })                                  // spends one
 
 What the user notices:
 
-- **One extra signature at connect**, asking for tokens (on top of the two key signatures).
-- **A daily limit.** The default is 5 writes per wallet per app per day; operators can raise it.
+- **No extra signature.** Connecting costs one wallet prompt (two the first time on a device).
+- **A daily limit.** The default is 5 writes per user per app per day; operators can raise it.
 - **The first write right after connecting can wait up to 60 seconds.** A token is never spent
   until it is 60 seconds old, so fetching and spending never sit next to each other in time.
 
@@ -51,8 +52,12 @@ Each code grants one day's quota:
 const ark = await createPrivateClient({ app: "my-app", wallet, tokenAttestation: "KENDRA-9F2C" })
 ```
 
-The issuer learns which wallet used which code; it still never learns which records the tokens paid
-for. Operators: see `ISSUER_CODES_FILE` in the [configuration reference](/reference/configuration).
+The issuer learns which derived identity used which code; it still never learns your wallet or which
+records the tokens paid for.
+
+An issuer that must see the wallet itself (for example, one that only serves an allowlist of wallets)
+can be served with `tokenIdentity: "wallet"`. The wallet then signs each issuance request, one more
+prompt per fetch. Operators: see `ISSUER_CODES_FILE` in the [configuration reference](/reference/configuration).
 
 ## Errors
 

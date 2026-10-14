@@ -57,7 +57,7 @@ Runs inside a relayer.
 | `ISSUER` | `off` | `on` to run the issuer in this relayer. Its URL defaults to `RELAYER_PUBLIC_URL`. |
 | `ISSUER_WALLET_PRIVATE_KEY` | — | Wallet that publishes daily issuer keys |
 | `ISSUER_RSA_SEED` | — | 32 bytes as `0x`-hex; daily RSA keys derive from it. Never change it mid-day. |
-| `TOKENS_PER_DAY` | `5` | Tokens per wallet (or per attestation code) per app per UTC day |
+| `TOKENS_PER_DAY` | `5` | Tokens per requesting identity (or per attestation code) per app per UTC day. Clients ask with an identity derived per (wallet, app) |
 | `ISSUER_QUOTA_FILE` | — | File that keeps quotas across restarts. Entries are HMACs and name no wallet. |
 | `ISSUER_CODES_FILE` | — | File of sha256 hashes (hex, one per line) of one-time attestation codes. When set, tokens require a code. |
 
