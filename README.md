@@ -41,7 +41,7 @@ npx mint broken-links
 
 The Semaphore pages describe the `0.1.0` source package, with recorded integration evidence from
 revision `a2255fe`. They distinguish measured functionality from remaining production work and
-provide a source-build fallback while the first npm release is unavailable.
+link the [published npm release](https://www.npmjs.com/package/arkognito/v/0.1.0), with a source-build fallback.
 
 ## Diagrams
 
