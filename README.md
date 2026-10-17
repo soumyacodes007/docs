@@ -39,8 +39,9 @@ npx mint broken-links
 | `DIAGRAMS.md` | Every diagram placeholder still to draw |
 | `AGENTS.md` | Writing rules for people and coding agents |
 
-The Semaphore pages describe local source revision `a2255fe` on `zk-feasibility`. They distinguish
-implemented and measured features from unpublished deployment and production work.
+The Semaphore pages describe the `0.1.0` source package, with recorded integration evidence from
+revision `a2255fe`. They distinguish measured functionality from remaining production work and
+provide a source-build fallback while the first npm release is unavailable.
 
 ## Diagrams
 

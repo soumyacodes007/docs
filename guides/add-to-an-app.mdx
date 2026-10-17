@@ -14,19 +14,25 @@ the one-time owner.
 ## Install
 
 ```bash
-npm install arkognito @arkiv-network/sdk@0.8.1 viem@2.57.4
+npm install arkognito@0.1.0 @arkiv-network/sdk@0.8.1 viem@2.57.4
 ```
 
 `@arkiv-network/sdk` 0.8.1 and `viem` are peer dependencies.
 
+<Warning>
+  The pinned `@cloudflare/blindrsa-ts@0.4.6` declares Node `>=24`. The repository's Node 22.23.3
+  tests pass, but a clean Node 22 install emits `EBADENGINE`; `engine-strict` installations reject
+  the mismatch. This dependency compatibility issue remains unresolved.
+</Warning>
+
 For group-gated records, use a build containing the optional `arkognito/semaphore` module and
 follow [anonymous group permissions](/guides/anonymous-membership). That upgrade is implemented
-at source revision `a2255fe`; publication/deployment is separate. Native Arkiv creation and
+in the `0.1.0` source package; use the source fallback below if the initial npm release is unavailable. Native Arkiv creation and
 ownership transfer already work without this SDK; Arkognito packages key management, recovery,
 relaying and privacy controls around them.
 
 <Note>
-  Until the package is on npm, build it from the repository: clone
+  If the package is unavailable on npm, build it from the main repository: clone
   [Arkognito](https://github.com/soumyacodes007/Arkognito), run `npm ci && npm run build`, then
   `npm pack` in `packages/sdk` and install the `.tgz`.
 </Note>
