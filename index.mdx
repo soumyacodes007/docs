@@ -1,16 +1,16 @@
 ---
 title: "Use Arkiv incognito"
-description: "Arkognito keeps every Arkiv record owned by its user while making records impossible to group by person."
+description: "Reduce wallet linkage in user-owned Arkiv records, with optional anonymous group permissions."
 sidebarTitle: "Introduction"
 keywords:
   - "Arkognito"
   - "Arkiv privacy"
   - "unlinkable ownership"
-  - "stealth addresses for data"
+  - "Semaphore"
 ---
 
-Arkognito is an open-source SDK and a set of self-hostable services that make writes to
-[Arkiv](https://arkiv.network) unlinkable. Each record is owned by a fresh one-time address that
+Arkognito, also called Veil, is an open-source SDK and a set of self-hostable services that reduce
+wallet-based linkage in [Arkiv](https://arkiv.network) apps. Each record is owned by a fresh one-time address that
 only its user can recompute, and is written by a shared relayer in a shuffled, padded batch. The
 user still owns every record, can find all of them again from any device, and can prove that one
 of them is theirs without revealing the others.
@@ -19,6 +19,8 @@ of them is theirs without revealing the others.
   Arkognito is experimental and runs on the Arkiv Tiramisu testnet only. The protocol is version
   0.x and may change, and the cryptography has not had an outside audit. See
   [Security](/operations/security).
+  Wallet separation does not guarantee complete anonymity: public metadata, content, timing and
+  network observations can identify users.
 </Warning>
 
 ## The problem in one query
@@ -43,9 +45,12 @@ help: the data stays readable in transaction history. [Read more](/concepts/link
 | Who pays gas | You, per write | The relayer |
 | Finding your records | Owner query | `myEntities()`, from any device, without telling anyone which records are yours |
 | Proving one record is yours | Implicit | `proveOwnership()`, for one record, one verifier, one challenge |
+| Anonymous eligibility | Application-specific | Optional Semaphore proofs show approved group membership without identifying the member |
 
-Measured on Tiramisu, an outside observer trying to group 50 records from 5 people did no better
-than random guessing. See the [linkage experiment](/architecture/linkage-experiment).
+In the original synthetic Tiramisu experiment, the tested observer grouped 50 records from five
+synthetic users no better than random guessing. This is evidence for that workload and observer,
+not a general anonymity guarantee or a Semaphore benchmark. See the
+[linkage experiment](/architecture/linkage-experiment).
 
 {/* DIAGRAM: before-after
     File: /images/diagrams/before-after.png
@@ -65,8 +70,8 @@ than random guessing. See the [linkage experiment](/architecture/linkage-experim
   <Card title="Self-host the network" icon="server" href="/operations/self-hosting">
     Two relayers, a token issuer and an OHTTP relay with one `docker compose up`.
   </Card>
-  <Card title="Understand the design" icon="layers" href="/architecture/overview">
-    How one-time owners, batching, blind tokens and Oblivious HTTP fit together.
+  <Card title="Anonymous group permissions" icon="users" href="/guides/anonymous-membership">
+    Enroll members, generate proofs and independently verify submissions.
   </Card>
 </CardGroup>
 
@@ -77,9 +82,14 @@ than random guessing. See the [linkage experiment](/architecture/linkage-experim
   Oblivious HTTP. Works in browsers and Node.
 - **Relayer**: batches records from many users, writes them to Arkiv, hands each to its one-time
   owner, and pays the gas. Anyone can run one.
-- **Token issuer**: hands out daily blind rate-limit tokens, so relayers can limit writes per
-  person without learning who wrote what.
+- **Token issuer**: hands out daily blind rate-limit tokens with quotas per issuance identity.
+- **Optional Semaphore module**: group administration, recoverable anonymous membership proofs,
+  proof-gated relaying and history-based duplicate checks. [Integration status](/architecture/semaphore-validation).
 - **OHTTP relay**: forwards encrypted requests so relayers never see users' IP addresses.
 
-Everything is MIT licensed, and all shared state lives on Arkiv: there is no database to run and
-no operator to trust. [Source on GitHub](https://github.com/soumyacodes007/Arkognito).
+Everything is MIT licensed. Arkiv holds public records, groups, discovery and token state;
+Semaphore admission also requires a durable local journal. Relayer operators and RPC providers
+remain trust and availability dependencies. [Source on GitHub](https://github.com/soumyacodes007/Arkognito).
+
+Credential policies are optional: see [Integrations](/integrations/overview). Anon Aadhaar test
+proving was explored separately; a production admission adapter is not included.
