@@ -1,5 +1,5 @@
 ---
-title: "Credential integrations"
+title: "Integrations"
 description: "Choose how your app approves members while reusing the same private record workflow."
 keywords: ["credential integrations", "admission", "Anon Aadhaar", "Semaphore"]
 ---
@@ -7,6 +7,16 @@ keywords: ["credential integrations", "admission", "Anon Aadhaar", "Semaphore"]
 Choose your app's eligibility policy separately from private record storage. Arkognito handles
 one-time ownership and optional Semaphore participation. Your application decides who may join
 the group and verifies the evidence for that decision off-chain.
+
+<CardGroup cols={2}>
+  <Card title="Anon Aadhaar" icon="fingerprint" href="/integrations/anon-aadhaar">
+    Gate group enrollment with a credential proof, then use Semaphore for anonymous submissions.
+    Experimental; the combined admission adapter is not implemented.
+  </Card>
+  <Card title="Semaphore groups" icon="users" href="/guides/anonymous-membership">
+    Create groups, enroll approved commitments and verify anonymous records with the implemented APIs.
+  </Card>
+</CardGroup>
 
 | Layer | Responsibility | Status |
 | --- | --- | --- |

@@ -67,7 +67,10 @@
           },
           {
             "group": "Integrations",
-            "pages": ["integrations/overview", "integrations/anon-aadhaar"]
+            "pages": [
+              "integrations/overview",
+              "integrations/anon-aadhaar"
+            ]
           },
           {
             "group": "Concepts",
@@ -141,6 +144,10 @@
           {
             "group": "Reference",
             "pages": ["reference/sdk", "reference/semaphore", "reference/protocol"]
+          },
+          {
+            "group": "Integrations",
+            "pages": ["integrations/overview", "integrations/anon-aadhaar"]
           }
         ]
       }

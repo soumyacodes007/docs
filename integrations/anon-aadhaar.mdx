@@ -1,6 +1,7 @@
 ---
-title: "Anon Aadhaar"
-description: "Plan an optional Aadhaar admission policy without making credentials a core SDK dependency."
+title: "Anon Aadhaar integration"
+sidebarTitle: "Anon Aadhaar"
+description: "Connect an app-specific Aadhaar admission policy to Veil's anonymous Semaphore groups."
 keywords: ["Anon Aadhaar", "Aadhaar", "test mode", "credential admission"]
 ---
 
@@ -14,6 +15,146 @@ another admission mechanism with the same Semaphore group APIs.
   verified unique-person enrollment. An application's policy does not establish legal RTI filing
   requirements or prove citizenship.
 </Warning>
+
+## Where it fits
+
+Anon Aadhaar gates **joining a group**. Semaphore gates **submitting records after joining**.
+Veil continues to handle encryption, relaying, one-time owners, record discovery and ownership
+proofs. Users do not need to present an Aadhaar credential for each subsequent record.
+
+For example, a reporting app could choose to admit credential holders to its private reporting
+group. Its admission service checks their credential proofs off-chain, then enrolls random-secret
+commitments. Reports use Semaphore proofs without publishing the credential or identifying which
+approved commitment submitted them. This is an application policy, not a legal RTI requirement.
+
+| Component | Responsibility |
+| --- | --- |
+| User's application | Generate a credential proof locally and bind it to the intended enrollment |
+| Application admission service | Verify the proof and policy, prevent enrollment replay, protect admission data |
+| Group admin | Publish only approved random-secret commitments through `addSemaphoreMembers` |
+| Veil client and relayer | Generate/verify Semaphore proofs and write records with one-time ownership |
+| Independent reader | Verify historical group membership, record binding and earliest valid nullifier use |
+
+Neither Anon Aadhaar nor a credential adapter is required for apps that use invitations or
+admin-approved membership. Keep this integration optional.
+
+## Before you start
+
+- Create a group and configure its relayer using [anonymous group permissions](/guides/anonymous-membership).
+- Use a build containing `arkognito/semaphore`; the source upgrade is not assumed to be on npm.
+- Keep the admin signer and credential verifier server-side, with one writer queue for its wallet.
+- Use synthetic Anon Aadhaar test credentials throughout this project's demonstration.
+
+For a separate experiment matching the tested versions:
+
+```bash
+npm install @anon-aadhaar/core@2.4.3 @anon-aadhaar/react@2.4.3
+```
+
+These are the experiment's pinned versions, not a claim about the latest release. Use the
+[upstream quick setup](https://documentation.anon-aadhaar.pse.dev/docs/quick-setup) for its
+provider, proof UI and off-chain verification APIs. Set the provider's `_useTestAadhaar` to
+`true` for synthetic credentials. Optional reveals include age above 18, gender, state and PIN
+code; request no optional fields unless your policy needs them.
+
+## Connect the enrollment flow
+
+### 1. Derive a group commitment
+
+In the browser, create or restore a vault for the group's project:
+
+```ts
+import { WorkerVault } from "arkognito"
+
+const { vault, recoveryCode } = await WorkerVault.random(group.project)
+const commitment = await vault.membershipCommitment(group)
+```
+
+Show the recovery code to the user and keep it private. Restore the same vault on subsequent
+visits; generating a new vault each visit creates a different identity. Send only the public
+commitment to the admission flow. Never derive this commitment from an Aadhaar number.
+
+### 2. Prove the intended enrollment
+
+Your admission service issues a short-lived, single-use challenge. Bind the credential proof's
+signal to the target commitment, group, app and challenge. Define one canonical encoding that
+the client and verifier both implement, including:
+
+| Binding input | Purpose |
+| --- | --- |
+| Protocol/version and Tiramisu chain ID | Separate this enrollment protocol from other uses |
+| App project, trusted admin and group key | Prevent reuse for a different application or group |
+| Random-secret membership commitment | Prevent replacing the intended member |
+| Server challenge and its expiry | Prevent replay of an old authorization |
+
+The installed core experiment required a numeric hex signal, rather than arbitrary text. Its
+public `signalHash` must be checked using the upstream encoding/hash rules. This page does not
+define a new wire protocol or an already implemented binding helper.
+
+### 3. Verify privately and reserve enrollment
+
+The admission service must check all of these before approving a commitment:
+
+- The cryptographic proof verifies against the intended test or production key policy.
+- The proof's public signal matches the server's expected enrollment binding.
+- The challenge is unexpired, unused and belongs to this enrollment request.
+- The credential timestamp meets the application's freshness policy; proof creation time alone is insufficient.
+- The nullifier seed matches a fixed, application-controlled policy, rather than a browser-selected value.
+- Required disclosures match the policy, and repeated enrollment is handled atomically off-chain.
+
+Test and production keys are different. A valid test proof must never authorize a production
+group. A browser's login state or a Boolean saying "verified" is not server-side evidence.
+
+Store the challenge, replay guard and pending enrollment outcome off Arkiv. If the admin write
+has an uncertain outcome, reconcile it before releasing the reservation or appending again.
+
+### 4. Append the approved commitment
+
+After your admission service has verified and reserved the enrollment, use Veil's existing API:
+
+```ts
+import { addSemaphoreMembers } from "arkognito/semaphore"
+
+await addSemaphoreMembers({
+  reader,
+  wallet: adminWallet,
+  coordinator, // The shared queue for every write from this admin wallet.
+  group,
+  members: [verifiedCommitment],
+  expires: 86400,
+})
+```
+
+`verifiedCommitment` means the exact commitment authenticated by the admission checks above.
+This snippet does not implement the credential verifier. Wait for confirmed enrollment before
+proving group membership. The group must also reach its configured minimum size.
+
+### 5. Use Veil normally
+
+```ts
+import { createPrivateClient } from "arkognito"
+
+const veil = await createPrivateClient({
+  app: group.project,
+  vault,
+  publicClient: reader,
+  relayers: [relayerUrl],
+  semaphore: { group },
+})
+
+await veil.createEntity({
+  payload: new TextEncoder().encode("Synthetic report"),
+  contentType: "text/plain",
+  attributes: { type: "report" },
+  expires: 3600,
+  encrypt: true,
+})
+```
+
+Subsequent submissions carry Semaphore membership proofs through the normal record endpoint.
+Use [verified reads](/guides/read-records#verify-anonymous-group-submissions) for group acceptance.
+Verification does not grant decryption access. Public metadata, group, scope, nullifier and timing
+remain observable; this integration does not provide complete anonymity.
 
 ## What was tested
 
@@ -34,17 +175,16 @@ An isolated experiment used the official public synthetic QR/certificate with
 These are single Node observations. They do not establish mobile performance, physical credential
 handling or production enrollment. The experiment was separate from the integrated SDK tests.
 
-## Proposed app integration
+## Work required for a supported adapter
 
-1. Generate a credential proof locally with the required issuer and disclosure policy.
-2. Bind the authorization to the user's random target commitment, group and an app-issued challenge.
-3. Verify the proof, issuer key, audience and freshness off-chain.
-4. Enforce your repeated-enrollment policy off-chain.
-5. Call `addSemaphoreMembers` with the approved commitment only.
-6. Use Semaphore proofs for subsequent participation; keep record ownership with the user.
+The credential verifier, canonical enrollment binding, challenge service and durable enrollment
+coordinator still need implementation. Before supporting the adapter, test rejection of invalid
+proofs, wrong issuer keys, test proofs under production policy, expired/reused challenges,
+substituted commitments, wrong groups, wrong seeds and concurrent duplicate enrollments. Also
+test recovery when enrollment is confirmed but its acknowledgement is lost.
 
-The proof verifier and binding need implementation and negative tests before this becomes a
-supported adapter. There is no permissive stub verifier to copy into production.
+These are required future checks, not results claimed by the isolated proving experiment.
+Physical-device, browser/mobile and full credential-to-Semaphore enrollment tests remain undone.
 
 ## Data that stays off Arkiv
 
