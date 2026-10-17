@@ -19,6 +19,12 @@ reveals exactly one record, to one verifier, for one challenge, until a deadline
 
 ## Flow
 
+<Note>
+  This ECDSA challenge proves control of one record's owner. A Semaphore proof separately proves
+  approved group membership without identifying the member. The two coexist; use
+  [verified membership reads](/guides/read-records#verify-anonymous-group-submissions) to check eligibility.
+</Note>
+
 <Steps>
 <Step title="The verifier issues a challenge">
 

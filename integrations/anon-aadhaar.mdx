@@ -1,0 +1,58 @@
+---
+title: "Anon Aadhaar"
+description: "Plan an optional Aadhaar admission policy without making credentials a core SDK dependency."
+keywords: ["Anon Aadhaar", "Aadhaar", "test mode", "credential admission"]
+---
+
+Use Anon Aadhaar as an optional admission integration when your application requires evidence of
+an Aadhaar credential. The application chooses this policy; other apps can use invitations or
+another admission mechanism with the same Semaphore group APIs.
+
+<Warning>
+  Status: experimental research, synthetic test mode only. The combined Anon Aadhaar-to-Semaphore
+  admission adapter is not implemented. Do not advertise this as a production Aadhaar login or
+  verified unique-person enrollment. An application's policy does not establish legal RTI filing
+  requirements or prove citizenship.
+</Warning>
+
+## What was tested
+
+An isolated experiment used the official public synthetic QR/certificate with
+`@anon-aadhaar/core` and `@anon-aadhaar/react` **2.4.3**. It generated and verified a test-mode proof.
+
+| Observation | Measured result |
+| --- | --- |
+| Proof including downloads | 183,300.44 ms |
+| Proving stage | 39,314.65 ms |
+| Verification | 870.09 ms |
+| Proof JSON | 2,038 bytes |
+| WASM | 10,469,686 bytes |
+| Proving key | 612,082,146 bytes |
+| Optional reveal flags | All zero |
+| Production-key verification of test proof | Rejected with `VerificationError: public key mismatch.` |
+
+These are single Node observations. They do not establish mobile performance, physical credential
+handling or production enrollment. The experiment was separate from the integrated SDK tests.
+
+## Proposed app integration
+
+1. Generate a credential proof locally with the required issuer and disclosure policy.
+2. Bind the authorization to the user's random target commitment, group and an app-issued challenge.
+3. Verify the proof, issuer key, audience and freshness off-chain.
+4. Enforce your repeated-enrollment policy off-chain.
+5. Call `addSemaphoreMembers` with the approved commitment only.
+6. Use Semaphore proofs for subsequent participation; keep record ownership with the user.
+
+The proof verifier and binding need implementation and negative tests before this becomes a
+supported adapter. There is no permissive stub verifier to copy into production.
+
+## Data that stays off Arkiv
+
+Never publish Aadhaar numbers, QR contents, photos, credential proofs, attester data or
+credential-derived nullifiers, even as hashes. The tested Anon Aadhaar nullifier depends on
+credential-related data and is not the public nullifier used for subsequent Semaphore posts.
+Arkiv group commitments must derive from random/private vault secrets, not from Aadhaar numbers.
+
+Semaphore submission nullifiers come from the random group identity and its scope. They do not
+prove that only one identity was enrolled per person. See [credential integrations](/integrations/overview)
+and the [Semaphore guide](/guides/anonymous-membership).

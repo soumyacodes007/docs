@@ -7,8 +7,9 @@ keywords:
   - "Arkognito relayer"
 ---
 
-Arkognito needs no hosted service from us. Every piece is open source, and all shared state lives
-on Arkiv, so there is no database to run. Run the whole network, or run one piece and use other
+Arkognito needs no hosted service from us. Every piece is open source. Arkiv stores public records,
+discovery, issuer keys and token state. Semaphore admission additionally needs a persistent local
+journal. Run the whole network, or run one piece and use other
 people's for the rest.
 
 | Service | Does | Sees | Needs |
@@ -127,8 +128,9 @@ npm run dev:relayers   # or: two relayers + issuer on :8787 and :8788
 npm run ohttp-relay    # OHTTP relay on :8790
 ```
 
-Use a process manager (systemd, pm2) to restart them on failure. They keep no local state except
-the optional issuer quota file.
+Use a process manager (systemd, pm2) to restart them on failure. Persist the optional issuer quota
+file and, when Semaphore is enabled, the mandatory admission journal. See
+[operating Semaphore](/operations/semaphore) before restarting or scaling that service.
 
 ## Platforms (Railway, Fly, Render)
 
@@ -150,9 +152,10 @@ Every service is the same `Dockerfile`; create one service per role and set `ROL
   relayer logs `LOW BALANCE` below `LOW_BALANCE_GLM`. The faucet gives 0.1 GLM a day per wallet.
 - **One wallet, one process.** Never run two processes on the same relayer wallet: their
   transactions collide.
-- **Restarts are safe.** Queued requests are lost and clients retry elsewhere; a record that was
-  already written is recognised by its client, so nothing is written twice. The heartbeat and the
-  OHTTP gateway key survive restarts.
+- **Reconcile uncertain writes.** Queued requests are lost on restart. The legacy client attempts
+  discovery before failover; membership clients stop automatic failover and retain reservations.
+  Preserve the Semaphore journal and known transaction hashes. Do not clear pending state to retry.
+  The OHTTP gateway key is derived deterministically from the relayer key.
 - **Issuer keys rotate daily** and derive from `ISSUER_RSA_SEED`. Never change the seed during a
   day: clients would see two keys and refuse the issuer.
 - **Logs** contain batch summaries only, never IPs or request bodies. Keep your proxy the same.

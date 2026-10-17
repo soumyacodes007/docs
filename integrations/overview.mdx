@@ -1,0 +1,39 @@
+---
+title: "Credential integrations"
+description: "Choose how your app approves members while reusing the same private record workflow."
+keywords: ["credential integrations", "admission", "Anon Aadhaar", "Semaphore"]
+---
+
+Choose your app's eligibility policy separately from private record storage. Arkognito handles
+one-time ownership and optional Semaphore participation. Your application decides who may join
+the group and verifies the evidence for that decision off-chain.
+
+| Layer | Responsibility | Status |
+| --- | --- | --- |
+| Core SDK | Encryption, relaying, one-time ownership, recovery and record discovery | Implemented |
+| Semaphore module | Anonymous group proofs, scoped nullifiers and independent verification | Implemented and tested; experimental |
+| Admin-approved commitments | Your admin admits eligible users through `addSemaphoreMembers` | Supported group API; eligibility is your policy |
+| Anon Aadhaar admission | Verify an Aadhaar credential proof, then admit its bound random commitment | Synthetic test proving only; combined adapter not implemented |
+| ZK Email admission | Verify an application-specific email credential proof | Deferred; no complete proof/admission integration |
+
+## The admission boundary
+
+1. The user derives a random-secret group commitment in their own vault.
+2. Your admission service verifies the chosen eligibility evidence.
+3. It checks freshness, audience, issuer/key policy and binding to that target commitment/group.
+4. Your admin enrolls the approved commitment.
+5. Subsequent records use Semaphore membership proofs through the same SDK workflow.
+
+<Warning>
+  There is no production credential adapter or public "approve me" endpoint included. A Boolean
+  supplied by a browser is not eligibility evidence. Preventing repeated enrollment is a separate
+  policy; Semaphore limits identities already admitted to a group, not unique people.
+</Warning>
+
+Keep credentials, attester data and private admission records off Arkiv. The hackathon forbids
+plaintext or hashed personal data, and this repository requires synthetic demonstrations.
+Do not publish real credential proofs or credential-derived nullifiers. Use synthetic credentials
+and synthetic records for demonstrations.
+
+Start with [anonymous group permissions](/guides/anonymous-membership). See the
+[Anon Aadhaar integration boundary](/integrations/anon-aadhaar) when your app needs that policy.

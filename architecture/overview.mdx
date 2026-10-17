@@ -10,9 +10,10 @@ keywords:
   - "Arkiv"
 ---
 
-Arkognito is a client SDK plus three small open-source services. All shared state lives on Arkiv:
-relayer discovery, issuer keys and the spent-token list are Arkiv entities, so there is no database,
-no central operator and nothing that only one company can run.
+Arkognito is a client SDK with self-hostable relayer, token issuer and OHTTP relay services.
+Arkiv holds app records, relayer discovery, issuer keys, spent-token markers and optional
+Semaphore groups. Operators retain local secrets and operational state. Membership admission
+also requires a durable off-chain journal; multiple hosts need additional coordination.
 
 <Warning>
   Experimental, testnet only (Arkiv Tiramisu). The protocol is version 0.x and has not had an
@@ -26,6 +27,7 @@ no central operator and nothing that only one company can run.
 - [Write path](#write-path)
 - [Read path](#read-path)
 - [Rate-limit tokens](#rate-limit-tokens)
+- [Anonymous group permissions](#anonymous-group-permissions)
 - [Oblivious HTTP](#oblivious-http)
 - [Discovery](#discovery)
 - [Failure handling](#failure-handling)
@@ -44,9 +46,9 @@ no central operator and nothing that only one company can run.
 | --- | --- | --- |
 | **SDK** (`arkognito`) | Derives keys, seals and pads records, verifies everything relayers return, finds records privately, proofs, tokens, OHTTP | Runs with the user. Keys stay in a Web Worker in browsers. |
 | **Relayer** | Validates, batches, shuffles and writes records; transfers each to its owner; pays gas; publishes a heartbeat | Sees records and request times. Cannot forge or redirect a record without detection. |
-| **Token issuer** | Publishes one RSA key per app per day on Arkiv; blind-signs tokens within quota | Sees wallets and token counts, never which records tokens paid for. |
+| **Token issuer** | Publishes one RSA key per app per day on Arkiv; blind-signs tokens within quota | Sees issuance identities and token counts. Blindness prevents cryptographic issuance-to-redemption matching; timing remains observable. |
 | **OHTTP relay** | Forwards encrypted requests to verified relayers | Sees IPs, never contents. Must be a different operator than the relayers. |
-| **Arkiv** | Stores records and all shared state | Public: every field is readable by anyone. |
+| **Arkiv** | Stores records and public protocol state | Public: every stored field is readable by anyone. |
 
 ## Keys
 
@@ -62,6 +64,9 @@ no central operator and nothing that only one company can run.
   and the id. No counters: nothing is reused after expiry, devices never collide.
 - Each record carries an **encrypted tag** naming its id. Only the root opens it.
 - One-time keys sign only envelopes and ownership proofs.
+
+Passkeys or recovery codes can supply the vault root instead of a wallet signature.
+With membership enabled, a separate identity derives inside the vault for each app/group.
 
 [One-time owners](/concepts/one-time-owners)
 
@@ -86,6 +91,12 @@ no central operator and nothing that only one company can run.
 6. **Verify.** The client reads the whole batch back and checks the signature and owner. A
    mismatch marks the relayer bad and retries elsewhere.
 
+<Note>
+  The token redemption and retry steps describe ordinary submissions. A configured membership
+  project instead requires a Semaphore proof, retains a durable admission reservation and creates
+  readonly records. Uncertain writes stop automatic failover and batch retries.
+</Note>
+
 ## Read path
 
 {/* DIAGRAM: read-path
@@ -107,8 +118,8 @@ The RPC provider never sees a query that names your record or address.
     File: /images/diagrams/blind-tokens.png
     (Same diagram as on the Blind tokens page.) */}
 
-- **Issuance** at session start: blinded messages, a wallet signature, a per-wallet (or per
-  attestation code) daily quota.
+- **Issuance** at session start: blinded messages signed by an app-derived issuance identity by
+  default, with a per-requesting-address (or per-attestation-code) daily quota.
 - **Redemption** per write: the relayer verifies the unblinded token against the day's key from
   Arkiv and writes an `arkognito.spent` marker in the same transaction.
 - **Key consistency:** one key per app per day; two on Arkiv and everyone refuses the issuer.
@@ -116,6 +127,18 @@ The RPC provider never sees a query that names your record or address.
 - **Double spend:** checked at redemption and before writing; a monitor reports any id recorded twice.
 
 [Blind tokens](/concepts/blind-tokens)
+
+## Anonymous group permissions
+
+The optional `arkognito/semaphore` module adds admin-authenticated groups, deterministic private
+membership identities, scoped nullifiers and record-bound proofs. Arkiv stores group state and
+proof-bearing records; relayers and readers verify proofs off-chain. No application contract runs
+on Arkiv. Independent readers reconstruct historical roots and select the earliest valid use of
+each nullifier, retaining spent state after deletion or expiry.
+
+Application-specific admission determines who joins. Semaphore does not establish one identity
+per person. [Build anonymous permissions](/guides/anonymous-membership),
+[operate the gate](/operations/semaphore) and review [measured limits](/architecture/semaphore-validation).
 
 ## Oblivious HTTP
 
@@ -154,6 +177,13 @@ The RPC provider never sees a query that names your record or address.
 | Relayer out of gas | `LOW BALANCE` logged; `/healthz` reports the balance |
 | Block lands while paging | Page-throughs pinned to one block |
 
+<Warning>
+  Retry, failover and batch-splitting rows above describe the ordinary flow. Membership submissions
+  stop on uncertain outcomes and preserve known transaction/request identifiers. Pending, corrupt
+  or stale-locked admission journals fail closed until reconciled. See
+  [restarts and uncertain writes](/operations/semaphore#restarts-and-uncertain-writes).
+</Warning>
+
 ## Deployment
 
 {/* DIAGRAM: deployment
@@ -169,6 +199,10 @@ behind HTTPS. It runs with Docker Compose, on Railway or Fly, or as plain Node p
 
 **Built and tested on Tiramisu:** the SDK (browser and Node), relayer, token issuer, OHTTP relay,
 Docker Compose stack, unit, browser and on-chain test suites, and the linkage experiment.
+
+**Optional membership integration:** group administration, encrypted SDK writes and ownership
+transfer, browser-worker proving and independent historical verification passed the
+[integration checks](/architecture/semaphore-validation). This source upgrade is not yet published.
 
 **Not yet:** an outside security audit; mainnet; public hosted relayers; smart-contract wallets;
 updating or deleting records from one-time owners (they hold no gas); sharing encrypted records with

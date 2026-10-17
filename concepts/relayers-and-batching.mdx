@@ -21,7 +21,8 @@ an address used once.
     one executeBatch: creates [r1..rn] then ownership transfers [r1->S1 .. rn->Sn] -> Arkiv.
     Each client then reads the whole batch back and verifies its record. */}
 
-The relayer also pays the gas, so users need no tokens or GLM to write.
+The relayer also pays the gas, so users need no GLM to write. Depending on policy, a request
+needs a blind token or an [anonymous membership proof](/guides/anonymous-membership).
 
 ## One transaction per batch
 
@@ -35,10 +36,16 @@ Arkiv's `executeBatch` applies creates before ownership changes inside one trans
 Each relayer wallet has exactly one writer. Two processes on one wallet would invalidate each
 other's predictions.
 
+<Note>
+  Splitting and retrying describes the blind-token flow. Membership batches stop after uncertain
+  sends and preserve their admission reservations. Reconcile the transaction before retrying;
+  see [Semaphore operations](/operations/semaphore).
+</Note>
+
 ## Hiding in the batch
 
 Timing is the obvious leak: "a request arrived, two seconds later a record appeared". Batching
-removes it:
+reduces that correlation:
 
 - the relayer waits until **k** records are queued (default 5) or the oldest has waited **max
   wait** (default 60 s), and never writes more often than every 5 blocks;
@@ -48,7 +55,8 @@ removes it:
   across browser tabs.
 
 Every record in a batch has the same creator, the same block, a padded size and a bucketed
-lifetime. An observer cannot tell which came from whom.
+lifetime. These properties make records harder to distinguish; they do not prevent correlation
+from network observations, rare attributes or disclosed content.
 
 ## Small batches
 
@@ -68,11 +76,22 @@ it and, with tokens on, its own spent marker. Nobody outside the relayer can tel
 and they open for nobody. Two limits: it only works for encrypted records (random bytes cannot pass
 for someone's plaintext), and it costs the relayer gas. The client is told how many were cover:
 
+<Note>
+  Membership records receive no synthetic cover. A relayer cannot invent valid group proofs;
+  satisfying `minAnonymity` for these records requires enough real approved submissions.
+</Note>
+
 ```ts
 const { batchSize, cover } = await ark.createEntity({ ..., encrypt: true }) // e.g. 5 and 4
 ```
 
 ## Trusting nothing the relayer says
+
+<Note>
+  The failover behavior below describes ordinary submissions. Membership submissions stop
+  automatic failover on uncertainty and preserve any known transaction hash and request ID.
+  Independently check eligibility with [readPosts()](/guides/read-records#verify-anonymous-group-submissions).
+</Note>
 
 A relayer could edit a record, keep it, or hand it to its own address. The client checks:
 

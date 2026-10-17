@@ -86,12 +86,18 @@ own URL.
   accept quotas resetting on restart.
 - `MAX_WAIT_MS=20000`: a private save waits at most 20 s for other users (default 60 s). Raise it
   for more privacy once there is real traffic.
-- `TOKENS_PER_DAY=20`: writes per user per app per day (default 5).
+- `TOKENS_PER_DAY=20`: tokens per issuance identity per app per day (default 5).
 
 </Accordion>
 </AccordionGroup>
 
 ## relay-2
+
+<Note>
+  To enable group authorization, also follow [Semaphore operations](/operations/semaphore).
+  Persist `SEMAPHORE_JOURNAL` across restarts. Separate hosts with separate journals do not
+  coordinate admissions; membership submissions must not use ordinary automatic failover.
+</Note>
 
 Same repository, a second service named `relay-2`, domain with target port **8788**, no volume:
 

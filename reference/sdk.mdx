@@ -11,7 +11,7 @@ keywords:
 import { createPrivateClient } from "arkognito"
 ```
 
-Peer dependencies: `@arkiv-network/sdk` 0.8.1 and `viem`. Works in browsers and Node.js 22+.
+Peer dependencies in the updated SDK: `@arkiv-network/sdk` 0.8.1 and `viem` 2.57.4. Works in browsers and Node.js 22+.
 
 ## createPrivateClient
 
@@ -20,7 +20,8 @@ const ark = await createPrivateClient(options)
 ```
 
 Derives the user's keys (one wallet signature; two the first time on a device), contacts the relayers and, when a
-relayer requires tokens, starts fetching the day's tokens.
+relayer requires tokens, starts fetching the day's tokens. Configuring Semaphore skips automatic
+token acquisition; membership authorizes records for the configured group project.
 
 ### Options
 
@@ -49,6 +50,13 @@ relayer requires tokens, starts fetching the day's tokens.
 
 <ParamField path="vault" type="Vault">
   A ready key vault (`KeyVault` or `WorkerVault`) instead of `wallet`, for example random-root mode.
+</ParamField>
+
+<ParamField path="semaphore" type="SemaphoreOptions">
+  Optional `group` descriptor and `snarkArtifacts`. The group project must match the client project.
+  Uses recoverable group-specific proofs through the normal record API. Requires a build containing
+  `arkognito/semaphore` and a relayer configured for that group. See
+  [anonymous group permissions](/guides/anonymous-membership).
 </ParamField>
 
 <ParamField path="project" type="string" default="app">
@@ -105,7 +113,8 @@ relayer requires tokens, starts fetching the day's tokens.
 </ParamField>
 
 <ParamField path="tokens" type="&quot;auto&quot; | TokenSource" default="&quot;auto&quot;">
-  `"auto"` fetches tokens with `wallet` at session start when a relayer requires them.
+  `"auto"` fetches tokens at session start when a relayer requires them, using `tokenIdentity`.
+  Semaphore clients skip automatic acquisition and do not redeem a blind token for a membership write.
 </ParamField>
 
 <ParamField path="tokenIdentity" type="&quot;derived&quot; | &quot;wallet&quot;" default="&quot;derived&quot;">
@@ -149,6 +158,8 @@ relayer requires tokens, starts fetching the day's tokens.
 | `lastReadMode()` | How the last `myEntities()` fetched payloads: `"all"` or `"batches"`. |
 | `myEntities({ refresh?, where? })` | Your verified records, newest first. `where` filters attribute values locally. |
 | `proveOwnership(entityKey, { challenge, verifier, ttlSeconds? })` | An ownership proof for one record. `ttlSeconds` defaults to 300. |
+| `membershipCommitment(group?)` | Public commitment for the supplied group or configured Semaphore group. Does not enroll the user. |
+| `readPosts()` | Independently verify the configured group's live feed and retained spent nullifiers. Throws on unavailable verification. |
 | `check({ attributes, expires, payload })` | Fingerprinting warnings, synchronous. |
 | `checkRarity(attributes, k?)` | Rarity warnings against the app's existing records. |
 | `scopeAddress(name)` | The owner address of a scope. |
@@ -195,6 +206,7 @@ Returned by `myEntities()`: `key`, `entityKey`, `owner`, `creator`, `app`, `cont
 | `WorkerVault.fromPasskey(app, opts?)`, `KeyVault.fromPasskey(app, opts?)` | Sign in with an existing passkey. Throws `PasskeyPrfUnsupportedError` without PRF. |
 | `vault.inboxAddress()`, `vault.openInbox(tags)`, `vault.envelopeSignerOf(ref)` | Inbox records: your address, trial-opening inbox tags, and the key an inbox record's envelope must be signed by. |
 | `vault.issuerIdentity()`, `vault.signIssuance(body)` | The derived address that asks for rate-limit tokens, and its signature over an issuance request. |
+| `vault.membershipCommitment(group)`, `vault.proveMembership(witness)` | Group-specific commitment and proof generation. Built-in vaults implement both; custom vaults need them for Semaphore. |
 | `WorkerVault.spawn()` | The bundled worker. `vault.terminate()` stops it. |
 
 Every vault implements `Vault`: `newRecord()`, `scopeRecord(name)`, `openTags(tags)`,
@@ -276,6 +288,11 @@ Protocol types are exported too: `SubmitRequest`, `StatusResponse`, `InfoRespons
 `TokenRedemption`, `IssueRequest`, `IssueResponse`.
 
 ## Errors
+
+Semaphore writes stop automatic failover after submission starts. `ArkognitoError` may expose
+`txHash`, `requestId` and `nullifier` for reconciliation; never infer that an error means no write.
+The optional module exports `MembershipInvalid` and `VerificationUnavailable`. See
+[Semaphore reference](/reference/semaphore) for group, proof, reader and coordinator exports.
 
 | Error | Thrown when |
 | --- | --- |

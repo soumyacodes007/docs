@@ -15,11 +15,17 @@ keywords:
   **not had an outside audit**. Do not use it to protect data whose exposure would cause real harm.
 </Warning>
 
-What is tested: unit tests for derivation, envelopes, tags, encryption, padding, proofs and OHTTP
-encapsulation; a browser test of the key worker; and on-chain tests on Tiramisu covering the full
-write and read paths, misbehaving relayers, failover, blind tokens, issuer equivocation, the
-linkage experiment and a 27-check edge-case suite. See the
-[edge-case register](/reference/edge-cases).
+The latest integrated Semaphore work passed **46 offline tests** and **32 live/browser checks**,
+including real proofs, actual SDK/relayer calls, browser-worker proving and historical duplicate
+verification. See [validation](/architecture/semaphore-validation) for versions, timings and limits.
+Other integration suites and historical measurements exist in the
+[edge-case register](/reference/edge-cases); they were not all rerun for this upgrade.
+
+<Warning>
+  The installed dependency tree reported 13 npm advisories: 4 moderate and 9 high. No production
+  exploitability review or automatic downgrade was performed. Physical passkeys, mobile devices,
+  cross-host admission coordination and a production credential adapter remain unvalidated or unbuilt.
+</Warning>
 
 ## Report a vulnerability
 
@@ -48,9 +54,13 @@ The known, documented limits are in the [threat model](/concepts/threat-model).
 | Relayer and issuer wallet keys | Environment variables of each service | Committed, shared between services, pasted in chats or issues |
 | `ISSUER_RSA_SEED` | Issuer's environment | Changed during a UTC day, shared |
 | `ARKIV_ACCESS_KEY` | Server-side environment | Shipped to browsers |
+| Group identity secret | Derived inside the user's vault or key worker | Exported as admission evidence, logged or written to Arkiv |
+| Membership admission journal | Persistent local operator storage | Exposed by the web server, written to Arkiv or discarded to clear pending state |
 
-Nothing secret, and nothing personal, is ever written to Arkiv: only one-time addresses, encrypted
-tags, random token ids, the app's own data and public issuer keys.
+Never publish roots, wallet derivation signatures, keys or user-to-wallet mappings. Real personal
+data must not appear in plaintext or as hashes; private content needs encryption and public
+attributes must stay non-identifying. Demo data is synthetic. Membership commitments derive from
+random/private vault secrets; real credential proofs and credential-derived nullifiers stay off Arkiv.
 
 ## Rules for operators
 
@@ -65,6 +75,9 @@ tags, random token ids, the app's own data and public issuer keys.
 - **Watch balances.** A relayer out of gas stops writing; `/healthz` reports `balanceGlm`.
 - **Keep the issuer seed stable within a day.** A changed seed publishes a second key, and every
   client then refuses the issuer as equivocating.
+- **Persist membership reservations.** Corrupt journals, stale locks and uncertain writes fail closed.
+  Keep known hashes and reconcile before repair; never assume an empty live query means unused.
+  See [operating Semaphore](/operations/semaphore).
 
 ## Rules for app builders
 
@@ -73,3 +86,5 @@ tags, random token ids, the app's own data and public issuer keys.
 - Keep attributes coarse and put personal content in encrypted payloads.
 - Treat a hostile frontend as out of scope: the key worker stops leaks and arbitrary signing, but a
   page you do not trust can still request Arkognito signatures and ownership proofs.
+- Verify membership feeds through `readPosts()`, not just `verifyRecord()`. Proof validity, historical
+  membership, message binding and duplicate policy are separate checks.

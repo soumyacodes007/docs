@@ -33,6 +33,7 @@ Every Arkognito record's payload is a small JSON envelope around the app's own d
 | `data` | The app's payload, base64 |
 | `sig` | The one-time owner's signature |
 | `pad` | Zeros that bring the envelope to a fixed size |
+| `membership` | Optional Semaphore group, root block and proof; checked separately from the ownership signature |
 
 ## The signature
 
@@ -62,3 +63,12 @@ Odd sizes and odd lifetimes would otherwise act as fingerprints. See
 [fingerprinting](/concepts/fingerprinting).
 
 The exact byte layout is in the [protocol reference](/reference/protocol).
+
+## Membership authorization
+
+For a configured Semaphore project, the SDK adds five typed proof projections before signing the
+envelope, then attaches the membership proof and pads again. The ownership signature covers every
+on-chain attribute. The membership message binds app data or ciphertext, owner, expiry, app,
+group, scope and historical root block. Verify both signatures/proofs and earlier-use policy.
+Membership-bearing records are readonly; deletion or expiry does not free a spent nullifier.
+See [protocol](/reference/protocol#semaphore-authorization) and [reader API](/reference/semaphore).

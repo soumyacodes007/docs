@@ -8,7 +8,8 @@ keywords:
   - "arkognito.spent"
 ---
 
-Arkognito writes four kinds of entity to Arkiv. Attribute names are lowercase: the Arkiv node
+The base protocol writes four kinds of entity to Arkiv; the optional Semaphore module adds group
+and member entities. Attribute names are lowercase: the Arkiv node
 rejects uppercase. Its own entities carry `project = "arkognito-7f3k"`.
 
 | Type | Owner | Creator | Attributes | Payload | Lifetime |
@@ -40,6 +41,41 @@ Readers check that it recovers to `$owner` and that `$expiresAt - $createdAt` ma
 | Today's issuer key | `project = str('arkognito-7f3k') AND type = str('arkognito.issuerKey') AND app = str(<app>) AND epoch = <day>`, created by the issuer. More than one result means equivocation. |
 | A token is already spent | `project = str('arkognito-7f3k') AND type = str('arkognito.spent') AND tokenid = bytes32(<id>)` |
 | Live relayers | `project = str('arkognito-7f3k') AND type = str('arkognito.relayer')`; trust only each entity's `$creator` |
+
+## Semaphore entities
+
+| Entity | Attributes | Payload | Creator and lifecycle |
+| --- | --- | --- | --- |
+| Group | `project: str`, `type: str('veil.group')` | Immutable rules: version, chain, depth, minimum size, root age and scope policy | Trusted admin; readonly; caller-selected lifetime |
+| Member | `project: str`, `type: str('veil.member')`, `group: str`, `memberindex: i32`, `commitment: u256` | Version 1 marker | Same admin; readonly; stable contiguous index; caller-selected lifetime |
+| Membership-authorized app record | Original app attributes, `project`, `vtag`, and the five projections below | Normal envelope plus `membership` | Trusted relayer creates readonly and transfers to one-time owner; normal expiry buckets |
+
+| Projection | Type | Value |
+| --- | --- | --- |
+| `zkgroup` | `str` | Group entity key |
+| `zkscope` | `str` | Decimal scope digest |
+| `zknullifier` | `str` | Decimal Semaphore nullifier |
+| `zkroot` | `str` | Decimal Merkle root |
+| `zkblock` | `u64` | Historical membership block |
+
+```ts
+// Extra field inside the padded envelope JSON; not a top-level HTTP request field.
+const membership = { group: group.key, rootBlock: snapshot.block, proof }
+```
+
+These attributes count toward the 32-attribute cap: at most 25 caller attributes remain after
+the five projections, `project` and `vtag`. Public group commitments derive from random/private
+vault secrets, never personal identifiers. Credential proofs and credential-derived nullifiers
+stay off Arkiv.
+
+Group lookup uses `project` and `$key = key(groupKey)` with the trusted admin creator. Member
+queries use `project`, `type` and `group`, also with the admin creator. Post queries use project,
+`zkgroup`, optional `zkscope` or `zknullifier`, and trusted relayer creators. Pin every page to
+one block and sort membership indexes locally.
+
+An unused nullifier cannot be established by a current-state query alone. The independent reader
+recovers native creation history, verifies records at creation, and retains spent status after
+deletion/expiry. See [anonymous group permissions](/guides/anonymous-membership).
 
 ## Explorer
 

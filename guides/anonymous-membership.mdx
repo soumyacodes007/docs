@@ -1,0 +1,188 @@
+---
+title: "Anonymous group permissions"
+description: "Require approved group membership without publishing which member submits a record."
+keywords: ["Semaphore", "anonymous membership", "group permissions", "Veil"]
+---
+
+Use the optional Semaphore module to authorize records while keeping the submitting member's
+identity hidden within the approved group. Your records retain their one-time owners, encryption,
+recovery and ownership proofs.
+
+<Note>
+  This guide describes source revision `a2255fe` on the SDK's `zk-feasibility` branch, also called
+  Veil. The upgrade was tested locally and on Tiramisu; it has not been published or deployed by
+  this integration work. Use a build containing `arkognito/semaphore`, rather than assuming the
+  current npm release includes it. See [installation](/guides/add-to-an-app#install).
+</Note>
+
+<Warning>
+  Semaphore proves membership, not unique-person status or the truth of a report. Public group,
+  scope, nullifier, timing and record metadata remain visible. This does not provide complete
+  anonymity. Arkiv has no application smart contracts: relayers and readers verify proofs.
+</Warning>
+
+## Create the group
+
+Use an admin wallet exclusively controlled by one writer. The public reader and wallet below are
+official Arkiv clients for Tiramisu; keep the wallet key and RPC access key on the server.
+
+```ts
+import {
+  createSemaphoreGroup,
+  addSemaphoreMembers,
+  SemaphoreWriteQueue,
+} from "arkognito/semaphore"
+
+// Reuse this queue for every write from this admin wallet.
+const coordinator = new SemaphoreWriteQueue()
+const { group, txHash } = await createSemaphoreGroup({
+  reader,
+  wallet: adminWallet,
+  coordinator,
+  project: "example-feedback",
+  rules: {
+    version: 1,
+    chainId: 7738577,
+    depth: 3,
+    minMembers: 3,
+    maxRootAgeBlocks: 300,
+    scope: { kind: "fixed", id: "feedback-round-1" },
+  },
+  expires: 86400,
+})
+```
+
+This creates an empty readonly group. Share its descriptor with eligible users. The descriptor
+contains `project`, `admin`, `key` and decimal `fromBlock`. Proof generation refuses the group
+until it has at least `minMembers` members. Three is the implementation minimum, not a claim
+that a three-person group gives adequate anonymity for your application.
+
+## Enroll approved members
+
+Each user derives a public commitment from their own vault:
+
+```ts
+import { WorkerVault } from "arkognito"
+
+const vault = await WorkerVault.fromRecoveryCode(savedRecoveryCode, "example-feedback")
+const commitment = await vault.membershipCommitment(group)
+```
+
+Send only the commitment through your app's admission process. The administrator verifies the
+application's eligibility policy and enrolls approved commitments:
+
+```ts
+await addSemaphoreMembers({
+  reader,
+  wallet: adminWallet,
+  coordinator,
+  group,
+  members: approvedCommitments,
+  expires: 86400,
+})
+```
+
+Keep admission off-chain. Never collect users' vault roots or recovery codes. Membership indexes
+are assigned in stable order and authenticated through the admin's creator address.
+
+<Note>
+  Membership is append-only in this version. Deleting a member does not immediately invalidate
+  proofs against previously accepted roots. Rotate the group and relayer policy for revocation.
+  Renew group and member lifetimes deliberately; automatic renewal is not implemented. Enroll
+  large groups in bounded batches rather than assuming one transaction can contain every member.
+</Note>
+
+## Configure the relayer
+
+Store an array of trusted descriptors in a local file, then set:
+
+```dotenv
+SEMAPHORE_GROUPS_FILE=data/groups.json
+SEMAPHORE_JOURNAL=data/semaphore-admissions.jsonl
+SEMAPHORE_HISTORY_BLOCKS=10000
+SEMAPHORE_TRUSTED_RELAYERS=
+```
+
+A configured project's records require its group proof even with `REQUIRE_TOKENS=off`. A valid
+membership proof replaces blind-token redemption for that project. Other projects retain their
+existing token policy. See [operating Semaphore](/operations/semaphore) before restarting or
+running multiple relayers.
+
+## Submit through the normal client
+
+```ts
+import { createPrivateClient } from "arkognito"
+
+const veil = await createPrivateClient({
+  app: "example-feedback",
+  vault,
+  publicClient: reader,
+  relayers: [relayerUrl],
+  semaphore: { group },
+})
+
+const record = await veil.createEntity({
+  payload: new TextEncoder().encode("Synthetic feedback"),
+  contentType: "text/plain",
+  attributes: { type: "feedback" },
+  expires: 3600,
+  encrypt: true,
+})
+
+const mine = await veil.myEntities()
+const ownership = await veil.proveOwnership(record.entityKey, {
+  challenge: "application-issued-random-challenge",
+  verifier: "reviewer-1",
+})
+```
+
+The SDK derives the group-specific identity inside your vault, reads a pinned membership snapshot,
+generates a proof, signs the record and submits it through the relayer. The relayer creates a
+readonly record and transfers ownership to its one-time owner in the same native batch.
+
+The proof binds the intended owner, app, typed app attributes, encrypted or plaintext bytes,
+encryption mode, expiry, group, chain, scope and root block. Five `zk*` attributes are reserved,
+leaving at most 25 caller attributes after `project` and `vtag`.
+
+<Warning>
+  Do not automatically retry a failed or timed-out membership write. The SDK stops automatic
+  failover and retains any known `txHash`, `requestId` and nullifier on `ArkognitoError`. A pending
+  reservation may represent an already published record. Reconcile before another submission.
+</Warning>
+
+## Independently verify submissions
+
+```ts
+import { createSemaphoreReader } from "arkognito/semaphore"
+
+const feed = createSemaphoreReader(reader, group, {
+  trustedRelayers: [knownRelayerWallet],
+  maxHistoryBlocks: 10000,
+  maxPages: 100,
+  maxPublications: 10000,
+})
+
+const { accepted, rejected, spent, snapshot } = await feed.readPosts()
+// veil.readPosts() uses the client group's configured relayer addresses.
+```
+
+The reader verifies native creation receipts, readonly flags, ownership signatures, historical
+roots and content binding. The earliest valid nullifier wins in block, transaction and log order.
+Deleted or expired winners remain spent; a later duplicate is not promoted.
+
+`accepted` contains live verified publications. It does not grant decryption access. Treat
+`VerificationUnavailable` as a failure to verify, never an empty feed. You need complete
+publication history and historical entity states; long-lived deployments need a durable index.
+
+## Choose the scope
+
+| Policy | Rules | Effect |
+| --- | --- | --- |
+| One poll or round | `scope: { kind: "fixed", id: "poll-1" }` | One accepted record per enrolled identity for that group |
+| Repeating windows | `scope: { kind: "window", blocks: 1800 }` | One accepted record per enrolled identity in each block-number window |
+
+Windows use block numbers, not wall-clock hours. Keep the existing `createEntity({ scope })`
+owner-sharing option separate: it deliberately reuses an owner and is not a Semaphore scope.
+
+See the [module reference](/reference/semaphore), [credential integrations](/integrations/overview)
+and [measured validation](/architecture/semaphore-validation).

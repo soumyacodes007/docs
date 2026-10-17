@@ -33,7 +33,9 @@ interactive version of this page is in the **API Reference** tab.
 ```
 
 `issuer` and `issuerUrl` are present when tokens are required; `ohttpKey` when OHTTP is on;
-`coverMinBatch` when the relayer pads small batches with cover records.
+`coverMinBatch` when the relayer pads small batches with cover records. The optional
+`semaphoreGroups` array lists accepted group keys. The optional `keeper` flag identifies a
+key-keeper service; it does not establish a completed sealed-record client workflow.
 
 ### POST /v1/records
 
@@ -57,7 +59,7 @@ Queue a sealed record.
 ```
 
 `u64` and `u256` attribute values are decimal strings. `token` is required when the relayer requires
-tokens; `minAnonymity` and `maxHoldMs` are optional. `inbox: true` marks a record written for someone
+tokens, except when a configured group proof authorizes the record; `minAnonymity` and `maxHoldMs` are optional. `inbox: true` marks a record written for someone
 else, whose envelope is signed by a key other than `owner`.
 
 Returns `202 { "id": "<uuid>" }`.
@@ -66,10 +68,18 @@ Returns `202 { "id": "<uuid>" }`.
 | --- | --- |
 | `400` | Invalid request: `owner` not an address or equal to the relayer; envelope not padded to 512/1024/4096/16384 bytes; `expSeconds` not a bucket or not equal to the envelope's; `app` mismatch; invalid or uppercase attribute name; missing `project`; more than 32 attributes; `minAnonymity` or `maxHoldMs` out of range; envelope signature does not recover to `owner` (or, with `inbox: true`, does); body not JSON |
 | `402` | Tokens required and none sent |
-| `403` | Token rejected: invalid, spent, from a day no longer accepted, or no issuer key on Arkiv |
+| `403` | Token rejected: invalid, spent, from a day no longer accepted, or no issuer key on Arkiv; required membership missing or group unconfigured |
+| `409` | Valid Semaphore nullifier already published or confirmed |
 | `413` | Body over 64 KB |
-| `429` | More than `RATE_LIMIT_PER_MIN` requests a minute from one address (tokens off only) |
-| `503` | Queue full |
+| `429` | Direct attempt limit when tokens are off or a Semaphore gate is configured |
+| `503` | Queue full, pending membership reservation, or unavailable membership/history verification |
+
+For a configured Semaphore project, the envelope JSON string includes `membership` with `group`,
+decimal `rootBlock` and `proof`. The typed attributes include the five reserved proof projections.
+These are inside the existing `envelope` and `attributes`; there is no new top-level proof field
+or separate proof-submission endpoint. Missing/unconfigured membership gets `403`, invalid proofs
+or bindings get `400`. See [the module reference](/reference/semaphore) and
+[entity schema](/reference/entities#semaphore-entities).
 
 ### GET /v1/records/:id
 
@@ -95,6 +105,12 @@ Returns `202 { "id": "<uuid>" }`.
 
 `position` (queued only) is the number of requests ahead. `404` for an unknown id. Statuses are
 kept for an hour after they finish.
+
+<Warning>
+  A failed membership status can include a known `txHash`. Reservations remain pending after an
+  uncertain outcome; a failed response is not permission to resubmit at another relayer. See
+  [reconciliation](/operations/semaphore#restarts-and-uncertain-writes).
+</Warning>
 
 ### POST /v1/ohttp
 

@@ -144,7 +144,8 @@ The submission carries `inbox: true`; the relayer requires a valid signature tha
 to `owner`.
 
 After writing, a client confirms its record the same way. If a relayer does not answer, the client
-looks for its own `vtag` in a fresh listing before retrying elsewhere.
+looks for its own `vtag` in a fresh listing before retrying elsewhere in the legacy flow.
+Semaphore submissions stop automatic failover; see [membership authorization](#semaphore-authorization).
 
 ## Relayer behaviour
 
@@ -157,12 +158,13 @@ looks for its own `vtag` in a fresh listing before retrying elsewhere.
   records copied from a random encrypted record in it (same app, attributes except `vtag`, content
   type, expiry, ciphertext length; random ciphertext and `vtag`; a fresh owner that signs it, or a
   separate signer when copying an inbox record; its own spent marker with a random token id).
-  Plaintext batches get no cover. The status reports `cover`.
+  Plaintext and membership-authorized records get no synthetic cover. The status reports `cover`.
 - **Shuffling:** records (Fisher–Yates, cryptographic randomness), and spent markers separately.
 - **Writing:** `predictEntityKeys(relayer, n + m)`, then one `executeBatch`: creates
   `[records…, markers…]` with the predicted salts, and ownership changes giving record `i` to its
   owner. One writer per wallet. Stale prediction: predict again (up to 3 times). Any other failure:
-  split the batch in halves and retry each.
+  split the legacy batch in halves and retry each. A membership-containing batch never splits or
+  retries an uncertain wallet call; it retains any known hash and its durable reservations.
 - **Client:** one write in flight per user and app (across tabs with Web Locks); random 0–20 s delay;
   give up on a relayer when its queue position has not improved for
   `3 × (maxWaitMs + 2 s × minIntervalBlocks) + 30 s` (or `maxHoldMs`, if longer).
@@ -247,6 +249,45 @@ ts: <ts>
   that id exists or it is in flight, and writes the marker (attributes `app`, `epoch`, `tokenid`
   (bytes32); empty payload; lifetime until the end of epoch + 1 day) in the same transaction as the
   record. It checks again right before writing and periodically scans for ids recorded twice.
+
+## Semaphore authorization
+
+Membership authorization uses the existing record API. `GET /v1/info` advertises optional
+`semaphoreGroups`. A configured project's envelope includes `membership` with group key, decimal
+root block and a Semaphore v4 proof. All five projection attributes are covered by the ordinary
+ownership signature. The record is readonly, then transferred to its intended one-time owner.
+
+```text
+domain = JSON.stringify(["veil-membership-v1", 7738577, project, lower(admin), lower(groupKey)])
+secret = HKDF-SHA256(root, salt = none,
+  info = "arkognito/semaphore/v1/" + app + "/" + domain, L = 32)
+identity = new Identity(secret)
+
+scope = decimal(SHA256(JSON.stringify([domain, ["fixed", id]])))
+// Or, for a block-number window:
+scope = decimal(SHA256(JSON.stringify([domain, ["window", decimal(floor(block/windowBlocks))]])))
+
+message = decimal(SHA256(JSON.stringify([
+  domain, rootBlock, scope, lower(owner), v, app, ct, exp, enc, data,
+  canonicalAttributes(base)
+])))
+```
+
+`base` excludes exactly `zkgroup`, `zkscope`, `zknullifier`, `zkroot` and `zkblock`, avoiding a
+circular dependency on the nullifier. Verify those typed projections separately. The proof does
+not hash envelope padding or its ECDSA signature; verify the ownership signature independently.
+
+Group rules and members are readonly, admin-created entities. Read them at the proof's historical
+root block, require ordered unique commitments and minimum group size, rebuild the root and check
+scope, depth, root age, content and owner binding. No application contract verifies this on Arkiv.
+
+The relayer validates before reserving a nullifier durably, then rechecks before writing. Invalid
+earlier proofs do not consume a nullifier. Independent readers order authenticated native creation
+events by block, transaction index and log index; the earliest valid nullifier wins. Deleted or
+expired winners retain spent status. Missing history is `VerificationUnavailable`, not no records.
+
+See [module reference](/reference/semaphore), [entities](/reference/entities#semaphore-entities)
+and [operator recovery](/operations/semaphore).
 
 ## Never on Arkiv
 

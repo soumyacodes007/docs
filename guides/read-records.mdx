@@ -98,6 +98,17 @@ rejected. Pass `relayers: [addresses]` to accept records from known relayers onl
   client. It tells the RPC provider which addresses are yours. Use `myEntities()`.
 </Warning>
 
+## Verify anonymous group submissions
+
+`verifyRecord()` validates an envelope and ownership signature. It does not by itself establish
+group eligibility or earlier-nullifier policy. For membership feeds, use
+`createSemaphoreReader(reader, group, { trustedRelayers }).readPosts()` from `arkognito/semaphore`,
+or `veil.readPosts()` on a configured membership client.
+
+The result separates live accepted posts, rejected publications and retained spent nullifiers.
+Deletion and expiry must not promote a duplicate. Treat unavailable verification as an error.
+See [the guide](/guides/anonymous-membership#independently-verify-submissions).
+
 ## Paging large result sets
 
 Arkiv cursors are tied to the block they were read at. If a block lands while you page, the next

@@ -33,7 +33,7 @@ image serves every role; `ROLE` picks it.
 | `MAX_BATCH` | `40` | Largest batch |
 | `COVER_MIN_BATCH` | `0` (off) | Fill batches smaller than this with cover records copied from a real encrypted record. Costs gas per cover record and marker |
 | `MAX_QUEUE` | `5000` | Queue cap; further submissions get `503` |
-| `RATE_LIMIT_PER_MIN` | `30` | Submissions per minute per address, tokens off only, kept in memory |
+| `RATE_LIMIT_PER_MIN` | `30` | Direct submission attempts per minute per remote address when tokens are off or a Semaphore gate is configured; kept in memory |
 | `MAX_MIN_ANONYMITY` | `50` | Largest `minAnonymity` a client may ask for |
 | `MAX_HOLD_MS` | `1800000` | Longest a client may ask the relayer to hold a record |
 | `OHTTP` | `on` | Accept Oblivious HTTP requests; the gateway key derives from the relayer key |
@@ -45,9 +45,21 @@ image serves every role; `ROLE` picks it.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `REQUIRE_TOKENS` | `off` | `on` to require a blind token per record |
+| `REQUIRE_TOKENS` | `off` | `on` to require a blind token, except records authorized by a configured Semaphore group |
 | `ISSUER_WALLET_ADDRESS` | — | Issuer whose daily keys this relayer accepts (when it does not run the issuer) |
 | `ISSUER_URL` | — | Issuer's base URL, given to clients in `/v1/info` |
+
+## Semaphore
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `SEMAPHORE_GROUPS_FILE` | Unset | Local JSON array of trusted group descriptors. Each configured project requires its group's proof. |
+| `SEMAPHORE_JOURNAL` | `data/semaphore-admissions.jsonl` | Durable admission reservations and confirmations. Persist across restarts; never expose through the web server. |
+| `SEMAPHORE_HISTORY_BLOCKS` | `10000` | Complete historical block span allowed during admission verification. |
+| `SEMAPHORE_TRUSTED_RELAYERS` | Empty | Comma-separated additional trusted creator addresses. This relayer includes itself. |
+
+One configured group per project is supported. Shared journals coordinate one host; one process
+must control each wallet. See [operating Semaphore](/operations/semaphore).
 
 ## Issuer
 

@@ -1,8 +1,9 @@
 # Arkognito docs
 
-Documentation for [Arkognito](https://github.com/soumyacodes007/Arkognito): unlinkable ownership for
+Documentation for [Arkognito / Veil](https://github.com/soumyacodes007/Arkognito): reduced wallet linkage for
 [Arkiv](https://arkiv.network) apps. Records are owned by one-time addresses, written by relayers in
-shuffled batches, and found again with nothing but the user's wallet.
+shuffled batches, and found again through the user's wallet, passkey or recovery-backed vault.
+Optional Semaphore integration adds anonymous group permissions. This is not complete anonymity.
 
 Built with [Mintlify](https://mintlify.com).
 
@@ -27,14 +28,19 @@ npx mint broken-links
 | `docs.json` | Theme, navigation and tabs |
 | `index.mdx`, `quickstart.mdx` | Introduction and a first private record |
 | `guides/` | Task guides: add to an app, migrate from the Arkiv SDK, read records, proofs, private payloads, tokens, OHTTP |
+| `guides/anonymous-membership.mdx` | Semaphore enrollment, proof-gated writes and independent verification |
+| `integrations/` | Optional admission policies, including the experimental Anon Aadhaar boundary |
 | `concepts/` | How it works: linkability, one-time owners, relayers and batching, envelopes, finding records, blind tokens, fingerprinting, threat model |
 | `operations/` | Self-hosting, Railway and Vercel, OHTTP relay, security, troubleshooting |
 | `reference/` | SDK, relayer API, configuration, entities, protocol, edge cases |
-| `architecture/` | Architecture overview, linkage experiment, notes on Arkiv |
+| `architecture/` | Architecture overview, linkage experiment, Semaphore validation, notes on Arkiv |
 | `openapi.json` | Relayer and issuer API, rendered in the API Reference tab |
 | `images/diagrams/` | Diagram images |
 | `DIAGRAMS.md` | Every diagram placeholder still to draw |
 | `AGENTS.md` | Writing rules for people and coding agents |
+
+The Semaphore pages describe local source revision `a2255fe` on `zk-feasibility`. They distinguish
+implemented and measured features from unpublished deployment and production work.
 
 ## Diagrams
 

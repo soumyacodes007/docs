@@ -1,0 +1,136 @@
+---
+title: "Semaphore module"
+description: "Group administration, recoverable membership identities, proof binding and independent reader APIs."
+keywords: ["arkognito/semaphore", "SemaphoreGroup", "MembershipReadResult", "SemaphoreWriteQueue"]
+---
+
+Import runtime helpers from `arkognito/semaphore`. Enable membership on the normal client with
+`semaphore: { group, snarkArtifacts? }`. This reference matches source revision `a2255fe`, not a
+claim that the upgrade is already on npm. See [the guide](/guides/anonymous-membership).
+
+## Types
+
+```ts
+type SemaphoreGroup = {
+  project: string
+  admin: Address
+  key: Hex
+  fromBlock: string
+}
+
+type SemaphoreRules = {
+  version: 1
+  chainId: number // Must be 7738577.
+  depth: number
+  minMembers: number
+  maxRootAgeBlocks: number
+  scope: { kind: "fixed"; id: string } | { kind: "window"; blocks: number }
+}
+
+type GroupSnapshot = {
+  group: SemaphoreGroup
+  rules: SemaphoreRules
+  block: string
+  members: string[]
+  root: string
+}
+
+type Membership = {
+  group: Hex
+  rootBlock: string
+  proof: SemaphoreProof
+}
+```
+
+Depth is an integer from 1 through 32. Minimum size must be at least three and fit the depth.
+Root age is a positive safe integer in blocks. Fixed IDs are nonempty and at most 128 characters;
+window lengths are positive safe integers. Commitments are distinct canonical decimal field
+elements. A descriptor's `fromBlock` is the actual group creation block.
+
+## Group administration
+
+| Export | Parameters | Result |
+| --- | --- | --- |
+| `SemaphoreWriteQueue` | Construct once per exclusively controlled wallet/process | `run(fn)` serializes writes; reuse it for every operation from that wallet |
+| `createSemaphoreGroup` | `reader`, `wallet`, `coordinator`, `project`, `rules`, `expires`, optional `members`, `memberCount` | Promise of `group` and `txHash` |
+| `addSemaphoreMembers` | `reader`, `wallet`, `coordinator`, `group`, nonempty `members`, `expires` | Native SDK batch result |
+
+`expires` is a relative lifetime in seconds. Omit initial members to create an empty group.
+Alternatively pass a commitment array, or an async callback receiving the predicted descriptor
+with `memberCount`. The callback runs under the writer queue; it must return that many commitments.
+The returned confirmed descriptor replaces draft `fromBlock: "0"` with the creation block.
+
+Only the configured admin can append members through the helper. Appending assigns contiguous
+indexes, rejects duplicates and observes capacity. Helpers do not implement distributed locking,
+automatic renewal or immediate revocation.
+
+## Vault and client methods
+
+| Method | Result |
+| --- | --- |
+| `vault.membershipCommitment(group)` | Public decimal commitment, derived from that vault/app/group |
+| `vault.proveMembership(witness)` | Semaphore proof; custom vaults implement this to support the client |
+| `veil.membershipCommitment(group?)` | Commitment using the supplied group or configured default |
+| `veil.readPosts()` | Independent verified history/feed for the configured group and reachable relayer addresses |
+
+Built-in KeyVault and WorkerVault support both operations. WorkerVault proves inside its worker.
+The witness contains `snapshot`, `scope`, `message` and optional `snarkArtifacts`.
+
+## Independent reader
+
+```ts
+const feed = createSemaphoreReader(reader, group, {
+  trustedRelayers: [knownRelayerWallet],
+  maxHistoryBlocks: 10000,
+  maxPages: 100,
+  maxPublications: 10000,
+})
+
+const snapshot = await feed.getSnapshot()
+const enrollmentSnapshot = await feed.getSnapshot(undefined, true)
+const result = await feed.readPosts()
+```
+
+The optional `true` permits enrollment inspection before minimum size; proving and verification
+still enforce `minMembers`. Omit `block` to pin a fresh head. Omit `scope` to read every scope.
+`check(row, atBlock)` verifies one selected record; it does not perform history deduplication.
+Use `readPosts()` for feed acceptance.
+
+| Result field | Meaning |
+| --- | --- |
+| `snapshot` | Decimal head block used for the read |
+| `accepted` | Live valid canonical publications |
+| `rejected` | Invalid/duplicate publication keys with reasons |
+| `spent` | Canonical key, nullifier and `live` flag, including deleted/expired winners |
+
+A publication includes key, initial owner, creator, envelope, attributes, membership, creation
+block, expiry, transaction index, log index and transaction hash. Ciphertext remains encrypted.
+Receipts establish ordering; lexical key order is not used. Provider completeness/retention is
+required. Budgets are positive safe integers; unavailable or incomplete verification fails closed.
+
+## Lower-level helpers
+
+| Export | Purpose |
+| --- | --- |
+| `createSemaphoreIdentity(secret)` | Requires 32 secret bytes; returns public `commitment` and `prove(witness)`. Supply high-entropy randomness, never a personal identifier. |
+| `membershipDomain(group)` | Canonical chain/project/admin/group-key domain |
+| `semaphoreScope(group, rules, block)` | Decimal digest of the fixed round or block window |
+| `membershipMessage(group, rootBlock, scope, owner, envelope, attributes)` | Decimal digest binding record content and intended owner |
+| `membershipAttributes(membership)` | Typed values for the five reserved proof projections |
+| `verifyMembership(args)` | Verify a proof against the supplied trusted historical snapshot and record binding |
+| `assertGroup`, `assertRules`, `assertMembers`, `assertProof`, `assertMembership` | Input validation helpers |
+| `ZK_ATTRIBUTES` | `zkgroup`, `zkscope`, `zknullifier`, `zkroot`, `zkblock` |
+
+Never trust an arbitrary caller-supplied snapshot in a verifier. Obtain it from the authenticated
+admin history. `verifyMembership` alone does not enforce earlier-use policy.
+
+## Errors
+
+| Error | Meaning |
+| --- | --- |
+| `MembershipInvalid` | Invalid schema, group, membership, proof or content binding |
+| `VerificationUnavailable` | Required RPC/history, receipts or configured work budget is unavailable |
+| `ArkognitoError` from the normal client | Submission stopped; may carry `txHash`, `requestId` and `nullifier` for reconciliation |
+
+`ArkognitoError` is exported from `arkognito`; the other errors are runtime exports of
+`arkognito/semaphore`. See [operator handling](/operations/semaphore#restarts-and-uncertain-writes).

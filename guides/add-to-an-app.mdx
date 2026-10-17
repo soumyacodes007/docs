@@ -1,6 +1,6 @@
 ---
 title: "Add Arkognito to an app"
-description: "Make an Arkiv app's writes unlinkable with the private client."
+description: "Reduce wallet linkage with the private client and optionally require anonymous group membership."
 keywords:
   - "createPrivateClient"
   - "Arkiv SDK"
@@ -14,10 +14,16 @@ the one-time owner.
 ## Install
 
 ```bash
-npm install arkognito @arkiv-network/sdk@0.8.1 viem
+npm install arkognito @arkiv-network/sdk@0.8.1 viem@2.57.4
 ```
 
 `@arkiv-network/sdk` 0.8.1 and `viem` are peer dependencies.
+
+For group-gated records, use a build containing the optional `arkognito/semaphore` module and
+follow [anonymous group permissions](/guides/anonymous-membership). That upgrade is implemented
+at source revision `a2255fe`; publication/deployment is separate. Native Arkiv creation and
+ownership transfer already work without this SDK; Arkognito packages key management, recovery,
+relaying and privacy controls around them.
 
 <Note>
   Until the package is on npm, build it from the repository: clone

@@ -86,7 +86,8 @@ https page, `http://` relayers are blocked as mixed content: relayers must have 
 </Accordion>
 <Accordion title="every relayer failed: …">
 
-The message lists each relayer's reason:
+For the ordinary token flow, the message lists each relayer's reason. Membership writes stop
+automatic failover: reconcile their original outcome before retrying elsewhere.
 
 - `relayer refused: 400 …`: the record broke a rule (see the next section);
 - `relayer refused: 402 …`: the relayer requires tokens and none was sent;
@@ -150,6 +151,25 @@ Smart-contract wallets are not supported in this version. Use an externally owne
 | `no issuer key on Arkiv for <app> day <n>` | The issuer has not published today's key. Check the issuer relayer is running. |
 | `issuer published 2 keys … refusing this issuer` | Two issuer keys exist for one day. The issuer's seed changed mid-day, or it is trying to track users. |
 | `token already spent` | The token was redeemed before. The client takes a fresh one on retry. |
+
+## Semaphore membership
+
+| Exact message | Action |
+| --- | --- |
+| `This project requires a Semaphore membership proof` | Enable the client's matching group configuration; a token cannot bypass the gate. |
+| `Semaphore group not configured` | Match the project, descriptor and relayer allowlist. |
+| `Valid nullifier already published` or `Nullifier already confirmed` | Locate the original accepted publication; do not resubmit this identity/scope. |
+| `Pending admission requires reconciliation` | Preserve the journal and original request ID/hash; inspect history before retrying. |
+| `Admission coordinator locked; reconcile before resuming` | Check for a live writer or stale lock. Do not automatically delete the lock. |
+| `Admission journal corrupt; reconciliation required` | Stop admissions and restore/reconcile the durable journal. |
+| `Membership root is future or too old` | Check the snapshot age and immutable group policy. Do not resend an uncertain prior admission. |
+| `Historical root or scope mismatch` | Use the authenticated historical group and correct fixed round/block window. |
+| `Complete membership history exceeds configured block budget` | Supply complete history within a deliberate budget or add a durable index. |
+| `Arkiv verification data unavailable` | Restore historical RPC availability; an unavailable scan cannot establish unused status. |
+
+The client may prefix a failure with `Semaphore submission stopped; reconcile before retrying:`.
+Preserve `ArkognitoError.txHash`, `requestId` and `nullifier` when present. A current-state query
+alone misses expired/deleted winners. See [operator recovery](/operations/semaphore#restarts-and-uncertain-writes).
 
 ## Reading
 

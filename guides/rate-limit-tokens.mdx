@@ -1,17 +1,24 @@
 ---
 title: "Rate-limit tokens"
-description: "How apps use relayers that limit writes per person without knowing who writes what."
+description: "Use blind-token quotas per issuance identity, or choose anonymous group permissions."
 keywords:
   - "blind tokens"
   - "rate limit"
   - "RFC 9474"
 ---
 
-A relayer pays gas for every record, so it needs to limit how much each person writes. If it
+A relayer pays gas for every record, so it needs to limit how much each issuance identity writes. If it
 limited by wallet, it would learn which wallet wrote which record. Instead, relayers can require a
 **blind token** per write: the issuer sees an identity derived from your keys (not your wallet) when it hands out tokens, the relayer sees a
 token when you spend it, and neither can connect the two. See [blind tokens](/concepts/blind-tokens)
 for how.
+
+<Note>
+  A client configured with `semaphore: { group }` skips automatic blind-token acquisition and
+  authorizes records with group proofs for that project. Scope/nullifier rules then limit
+  enrolled identities. Other projects retain their token policy. See
+  [anonymous group permissions](/guides/anonymous-membership).
+</Note>
 
 ## In an app: nothing to do
 
@@ -27,7 +34,7 @@ await ark.createEntity({ ... })                                  // spends one
 What the user notices:
 
 - **No extra signature.** Connecting costs one wallet prompt (two the first time on a device).
-- **A daily limit.** The default is 5 writes per user per app per day; operators can raise it.
+- **A daily limit.** The default is 5 tokens per issuance identity per app per day; operators can raise it. This does not establish unique people.
 - **The first write right after connecting can wait up to 60 seconds.** A token is never spent
   until it is 60 seconds old, so fetching and spending never sit next to each other in time.
 

@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "palm",
   "name": "Arkognito",
-  "description": "Use Arkiv incognito: records stay yours, but nobody can tell which records belong to the same person.",
+  "description": "Reduce wallet linkage on Arkiv while retaining record ownership, with optional anonymous group permissions.",
   "colors": {
     "primary": "#4F3BD1",
     "light": "#A99BFF",
@@ -61,8 +61,13 @@
               "guides/passkeys",
               "guides/send-to-user",
               "guides/rate-limit-tokens",
+              "guides/anonymous-membership",
               "guides/oblivious-http"
             ]
+          },
+          {
+            "group": "Integrations",
+            "pages": ["integrations/overview", "integrations/anon-aadhaar"]
           },
           {
             "group": "Concepts",
@@ -81,6 +86,7 @@
             "group": "Operate",
             "pages": [
               "operations/self-hosting",
+              "operations/semaphore",
               "operations/deploy-railway-vercel",
               "operations/ohttp-relay",
               "operations/security",
@@ -91,6 +97,7 @@
             "group": "Reference",
             "pages": [
               "reference/sdk",
+              "reference/semaphore",
               "reference/relayer-api",
               "reference/configuration",
               "reference/entities",
@@ -108,6 +115,7 @@
             "pages": [
               "architecture/overview",
               "architecture/linkage-experiment",
+              "architecture/semaphore-validation",
               "architecture/arkiv-notes"
             ]
           }
@@ -126,12 +134,13 @@
               "guides/add-to-an-app",
               "guides/migrate-from-arkiv-sdk",
               "guides/read-records",
-              "guides/ownership-proofs"
+              "guides/ownership-proofs",
+              "guides/anonymous-membership"
             ]
           },
           {
             "group": "Reference",
-            "pages": ["reference/sdk", "reference/protocol"]
+            "pages": ["reference/sdk", "reference/semaphore", "reference/protocol"]
           }
         ]
       }

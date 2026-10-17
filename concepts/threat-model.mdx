@@ -9,11 +9,11 @@ keywords:
 
 ## Who sees what
 
-| Party | Sees | Must not learn |
+| Party | Sees | Privacy aim; limits below |
 | --- | --- | --- |
-| Anyone reading Arkiv | All records, owners, creators, batches, spent markers | Which records belong to the same person |
+| Anyone reading Arkiv | Records, owners, creators, batches, spent markers; membership group/scope/nullifier when used | Reduce links to a main wallet or other records |
 | Relayer | Records, one-time owners, request times; IPs unless OHTTP is used | Which wallet sent which record |
-| Token issuer | Wallets and how many tokens each took | Which records those tokens paid for |
+| Token issuer | Requesting derived identities or wallets, and how many tokens each took | Separate issuance from the records those tokens pay for |
 | OHTTP relay | Client IPs and encrypted blobs | Request contents |
 | Arkiv RPC provider | Your IP and app-wide or batch-wide reads | Which records or addresses are yours |
 | The page running the SDK | The wallet, addresses, tags, signatures it asks for | The root key or any private key |
@@ -25,11 +25,14 @@ We assume a relayer and the issuer may be run by the same team, and design for i
 - **Linking records to each other or to a wallet** from chain data: one-time owners, a shared
   creator, shuffled padded batches, bucketed lifetimes.
 - **Relayer tampering:** signed envelopes, verified by the client after every write and by any reader.
-- **Relayer censorship or crashes:** failover, and duplicate-free recovery.
+- **Relayer censorship or crashes:** legacy failover attempts; membership writes stop after uncertainty
+  and require durable admission/reconciliation instead of automatic resubmission.
 - **Reads revealing ownership:** app-wide listings, local tag opening, batch-level fetches.
 - **Rate limits revealing identity:** blind tokens, key-consistency checks, timing separation.
 - **Network identity:** Oblivious HTTP, when used, with relayers verified through Arkiv.
 - **Key exposure in the browser:** keys in a Web Worker that only signs Arkognito-shaped requests.
+- **Optional anonymous eligibility:** Semaphore proofs establish membership and message binding;
+  an independent history reader enforces earliest-valid-nullifier policy.
 
 ## Limits, stated plainly
 
@@ -37,9 +40,11 @@ We assume a relayer and the issuer may be run by the same team, and design for i
   different people. Without OHTTP, the relayer sees IPs.
 - **Anonymity is per batch.** In a quiet hour a batch can be small; use `minAnonymity` to refuse
   small batches, or relayers with `COVER_MIN_BATCH` to pad encrypted records with cover.
+  Membership records cannot use synthetic covers; a valid proof cannot be forged for padding.
 - **Inbox records are recognisable** as inbox records, though not who they are for or who sent them.
 - **A passkey root is lost with the passkey;** creating one returns a recovery code.
-- **Quotas limit wallets, not people,** unless the issuer requires attestation codes.
+- **Quotas limit issuance or enrolled identities.** Admission policies and resistance to repeated
+  enrollment remain application responsibilities; Semaphore does not prove unique people.
 - **A hostile frontend** can still ask the key worker for signatures and ownership proofs. Only use
   Arkognito on pages you trust, with no third-party scripts.
 - **Content can identify people** regardless of owners. `check()` helps but cannot catch everything.
@@ -47,6 +52,12 @@ We assume a relayer and the issuer may be run by the same team, and design for i
 - **Records are create-only.** One-time owners hold no gas.
 - **Smart-contract wallets** are not supported in this version.
 - **No outside audit yet.** The protocol is experimental and runs on testnet only.
+- **Membership is publicly scoped.** Group, scope and nullifier are visible. Repeated attempts in
+  one scope intentionally share a nullifier; small groups, timing and content can identify members.
+- **History and coordination are dependencies.** Verification needs complete historical state and
+  logs. Shared journals coordinate one host; cross-host coordination and automatic repair are not built.
+- **Credentials are separate.** Anon Aadhaar synthetic proving was tested separately; no combined
+  production admission adapter is included. Keep credential proofs and derived nullifiers off Arkiv.
 
 Every case, with its status and the test that shows it, is in the
 [edge-case register](/reference/edge-cases).

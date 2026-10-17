@@ -1,0 +1,102 @@
+---
+title: "Operate a Semaphore relayer"
+description: "Configure trusted groups, persist admission reservations and handle uncertain writes safely."
+keywords: ["Semaphore relayer", "durable admission", "nullifier", "reconciliation"]
+---
+
+Enable group authorization on the existing relayer. There is no separate Semaphore HTTP server
+or on-chain contract. Clients use the normal record endpoint and status polling.
+
+## Configure trusted groups
+
+`SEMAPHORE_GROUPS_FILE` names a local JSON array of descriptors returned by `createSemaphoreGroup`.
+Allow one group per project. Do not accept a caller-supplied admin or group as trusted configuration.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `SEMAPHORE_GROUPS_FILE` | Unset | Enable the configured groups; their projects require membership proofs |
+| `SEMAPHORE_JOURNAL` | `data/semaphore-admissions.jsonl` | Durable local reservation and confirmation journal |
+| `SEMAPHORE_HISTORY_BLOCKS` | `10000` | Maximum complete historical span scanned during admission |
+| `SEMAPHORE_TRUSTED_RELAYERS` | Empty | Comma-separated additional trusted creator addresses; this relayer includes itself |
+
+Persist the journal outside the web root and outside Arkiv. It contains public nullifier
+reservations, request IDs and confirmed receipt metadata, without credential proofs or user roots.
+Back it up as operational state. Keep RPC access headers and signing keys server-side.
+
+## Admission and batching
+
+1. Validate the signed envelope and proof schema.
+2. Rebuild the admin's group at `rootBlock`, then verify the proof, scope and content binding.
+3. Check retained valid history, including vanished winners.
+4. Flush a pending reservation before queueing.
+5. Recheck membership before the batch write.
+6. Create readonly records and transfer ownership atomically; confirm reservations after success.
+
+Membership batches require real valid submissions to meet the requested `minAnonymity`.
+Synthetic cover records cannot forge membership proofs and are disabled for these records.
+If filtering shrinks the final batch below a request's minimum, it is not written.
+
+## Restarts and uncertain writes
+
+<Warning>
+  A crash, scope expiry, batch rejection, timeout or uncertain broadcast retains pending state.
+  There is no automatic reservation release, resend or journal repair. Do not clear a journal
+  or stale lock to make the service accept a request again.
+</Warning>
+
+| Result | Meaning | Operator action |
+| --- | --- | --- |
+| `400` | Invalid membership proof or binding | Fix the request; never weaken verification |
+| `403` | Missing required membership or unconfigured group | Check the app's group and relayer policy |
+| `409` | Valid nullifier already published or confirmed | Find the original submission |
+| `503` with pending reservation | Outcome needs reconciliation | Inspect original transaction history and known request/hash |
+| `503` with unavailable verification | Required RPC/history cannot be verified | Restore availability; do not treat it as an unused nullifier |
+| Corrupt journal or stale lock | Coordinator fails closed | Restore/reconcile trusted operational state before manual repair |
+
+A membership-containing batch does not split or retry an uncertain wallet call. Failed status can
+still carry a known `txHash`; preserve it. An empty current-state query cannot establish that a
+write never happened, because the record could have expired or been deleted.
+
+## Multiple operators
+
+<Note>
+  One process controls each signing wallet. Sharing the same journal coordinates cooperating
+  relayers on one host with separate wallets. It is not cross-host consensus. Every participating
+  writer must use the shared coordinator, and readers need the complete trusted creator set.
+</Note>
+
+Separate journals can admit duplicate writes. The independent reader chooses the earliest valid
+publication among its configured trusted creators; it does not prevent those writes on Arkiv.
+Cross-host admission coordination and automatic recovery remain production work.
+
+## Historical availability
+
+Independent verification needs native logs, successful receipts and entity state at past blocks.
+Default block/page/publication budgets are finite. Increase budgets only for a bounded workload,
+and use a durable authenticated index for long-lived deployments. Provider completeness and
+retention remain explicit trust and availability dependencies.
+
+## Self-host proving artifacts
+
+Pass the app client `semaphore.snarkArtifacts` with same-origin or CORS-enabled `wasm` and `zkey`
+URLs. Identity/group/proof packages are pinned to **4.14.4**; the proof package selects artifact
+version **4.13.0**. Use the files for the group's immutable depth.
+
+```ts
+const veil = await createPrivateClient({
+  app: "example-feedback",
+  vault,
+  relayers: [relayerUrl],
+  publicClient: reader,
+  semaphore: { group, snarkArtifacts: { wasm: wasmUrl, zkey: zkeyUrl } },
+})
+```
+
+| Depth-3 artifact | SHA-256 |
+| --- | --- |
+| `semaphore-3.wasm` | `48e15502f710be0a623d573d472edeeaf918fd5eee0b2ca9b407c4e4f20d12f2` |
+| `semaphore-3.zkey` | `c36653c42784df35a01f3d93415af9ad8292a540f8deb134a6a34a01752a89d3` |
+
+These files were tested from `https://snark-artifacts.pse.dev/semaphore/4.13.0/` and self-hosted
+during browser verification. Default downloads and Node caching come from the upstream proof
+library. See [validation and remaining limits](/architecture/semaphore-validation).

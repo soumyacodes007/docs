@@ -54,11 +54,12 @@ encrypted before it is written. See [encrypted payloads](/guides/private-payload
 
 Hiding records is easy if users give up ownership. The goal is harder:
 
-1. **Unlinkable:** nobody can tell which records belong to the same person.
+1. **Less wallet linkage:** public owner and creator queries do not directly join a user's records to their main wallet.
 2. **Still owned:** each record is owned by a key only its user controls.
 3. **Findable:** the user can find all their records again, from any device.
 4. **Provable:** the user can prove one record is theirs when they choose to.
 5. **Open:** no single company runs the privacy layer.
 
 [One-time owners](/concepts/one-time-owners) and [relayers](/concepts/relayers-and-batching) are
-how Arkognito meets all five.
+how Arkognito supports these goals. Timing, network observations, unusual attributes and disclosed
+content can still link records. See the [threat model](/concepts/threat-model).

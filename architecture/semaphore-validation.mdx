@@ -1,0 +1,67 @@
+---
+title: "Semaphore validation"
+description: "Measured SDK, relayer and browser results, with unresolved limits stated separately."
+keywords: ["Semaphore validation", "Tiramisu", "browser proving", "test evidence"]
+---
+
+The integrated SDK/relayer implementation at source revision `a2255fe` was tested on
+17 October 2026. These tests executed the actual SDK and relayer, beyond the earlier isolated
+feasibility spikes. All records were synthetic; all writes used a throwaway Tiramisu wallet.
+
+<Note>
+  This is test evidence for an experimental implementation. The upgrade was not published or
+  deployed by the integration work, and no independent security audit was performed.
+</Note>
+
+## Integrated results
+
+| Check | Observed result |
+| --- | --- |
+| Offline suite | 46 passed, 0 failed on Node 22.23.3 |
+| Live/browser integration | 32 checks passed, including eight receipt checks |
+| SDK build and typecheck | Passed |
+| Existing frontend production build | Passed |
+| Compiled package import and dry run | Passed; module, declarations, worker and guide included |
+| Node full write/recovery | 23,830.97 ms |
+| Browser full write and decryption | 28,856.50 ms; headless Chrome 154.0.8037.100 |
+| Final eight-transaction gas | 0.001851494003702988 testnet GLM, reconciled against the balance delta |
+| Temporary test frontend | Removed after testing; existing demo preserved |
+
+Times include proof generation, RPC, transaction waits and readback; they are not pure proving
+benchmarks. Browser artifacts were self-hosted with matching pinned SHA-256 digests. The browser
+used a recovery-backed WorkerVault, not a physical passkey or mobile device. Versions were Arkiv
+0.8.1, viem 2.57.4, Semaphore 4.14.4, Vite 8.3.4 and Playwright 1.64.1.
+
+## Boundaries exercised
+
+- Empty-group creation, minimum-size enforcement, enrollment and historical snapshots after appending.
+- Normal SDK encrypted writes, one-time ownership transfer, readonly creation and ownership challenges.
+- Recovery from an injected failed acknowledgement after confirmation, without resending.
+- Real browser-worker proof generation, submission and decrypted record discovery.
+- Invalid proof, missing proof, owner substitution, malformed JSON and replay rejection.
+- Independent proof/content verification and chronological selection of a same-nullifier winner.
+- Deletion and actual expiry preserving spent state without promoting a later duplicate.
+- An actual process exit after durable reservation, corrupt/stale-locked journals and fail-closed recovery.
+- Uncertain sends without batch splitting/retries, known hash retention and final anonymity checks.
+- Typed verification unavailability rather than silently returning an empty feed.
+
+## Remaining work
+
+| Area | Limit |
+| --- | --- |
+| Credential admission | No combined production Aadhaar/email adapter |
+| Coordination | Shared journal coordinates one host; cross-host consensus is not implemented |
+| Recovery | Uncertain admissions and stale locks require operator reconciliation |
+| History | Complete RPC history is required; long-lived deployments need a durable index |
+| Dependencies | npm audit reported 13 advisories: 4 moderate, 9 high; no exploitability review or forced downgrade performed |
+| Devices | No physical passkey/mobile validation for this integration |
+| Privacy | Public group/scope/nullifier, metadata, timing and network observations remain |
+
+Node tests also emitted a `MaxListenersExceededWarning` about 15 socket `unpipe` listeners. Its
+source was not diagnosed. Proving workers kept an early Node test process alive after assertions;
+the test runner uses an explicit force-exit after tests and the integration driver exits after
+cleanup. Vite warned about existing `__dirname` and browser-externalized `crypto` imports; the
+build and actual worker flow passed. These observations are not silently treated as resolved.
+
+See [security](/operations/security), [operating Semaphore](/operations/semaphore) and the
+[module reference](/reference/semaphore).
